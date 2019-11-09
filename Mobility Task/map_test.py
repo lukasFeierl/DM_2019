@@ -1,10 +1,8 @@
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 
-# import OWSLib
-# owslib.wms.WebMapService
 # from owslib.wms import WebMapService
-# wms = WebMapService('http://wms.jpl.nasa.gov/wms.cgi', version='1.1.1')
+# wms = WebMapService('http://labs.metacarta.com/wms/vmap0')
 
 
 def plot_map():
