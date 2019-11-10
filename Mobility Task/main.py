@@ -4,6 +4,7 @@
 
 import os
 import pandas as pd
+import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -12,10 +13,9 @@ import mplleaflet
 
 
 def main():
-
     # PARAMETER
     # --------------------------------------------
-    data_directory = r"./cgt_stud_2019"               # local path
+    data_directory = r"./cgt_stud_2019"  # local path
     subdir_list = [r"10_78_2019-11-01T180450.475",
                    r"10_82_2019-10-31T085843.034",
                    r"10_83_2019-10-31T084235.379",
@@ -34,10 +34,11 @@ def main():
         # Calculations
         mode_changes = _get_mode_changes(markers)
 
-        # Plotting
-        plot_acceleration(acceleration, mode_changes=mode_changes, title=dir)
-        plot_position(positions)
-        # plot_acceleration_and_gps(acceleration, positions, mode_changes=mode_changes, title=dir)
+    # Plotting
+    plot_acceleration(acceleration, mode_changes=mode_changes, title=dir)
+    plot_position(positions)
+    # plot_acceleration_and_gps(acceleration, positions, mode_changes=mode_changes, title=dir)
+
     return True
 
 
@@ -77,43 +78,42 @@ def _get_mode_changes(markers):
 def plot_acceleration(acceleration, mode_changes=None, title=""):
 
     fig, axes = plt.subplots(3, sharex=True, sharey=True)
+    fig.suptitle("Acceleration data \n" + title)
 
-    # PLOT all Data
-    axes[0].plot(acceleration["time"], acceleration["x"], linewidth=1, color="gray", alpha=1)
-    axes[1].plot(acceleration["time"], acceleration["y"], linewidth=1, color="#FFCCCE", alpha=1)
-    axes[2].plot(acceleration["time"], acceleration["z"], linewidth=1, color="#86abf9", alpha=1)
+    # PLOT  Acceleration data
+    axes[0].plot(acceleration["time"], acceleration["x"], linewidth=1, color="gray")
+    axes[1].plot(acceleration["time"], acceleration["y"], linewidth=1, color="#FFCCCE")
+    axes[2].plot(acceleration["time"], acceleration["z"], linewidth=1, color="#86abf9")
 
-    # PLOT median
-    resample_interval = "5s"
-    acceleration = acceleration.copy()
-    acceleration.index = acceleration["time"]
-    acc_median = acceleration.resample(resample_interval).median()
-
+    # FORMATTING
     for ax in axes:
-        ax.plot(acc_median["x"], linewidth=2, color="black", label="x - median: "+resample_interval)
-        ax.plot(acc_median["y"], linewidth=2, color="red", label="y - median: "+resample_interval)
-        ax.plot(acc_median["z"], linewidth=2, color="blue", label="z - median: "+resample_interval)
-        ax.legend(loc="upper right")
-
-        # FORMATTING
-        major_ticks = mdates.MinuteLocator(byminute=range(0, 60, 5))
-        major_formatter = mdates.DateFormatter('%H:%M')
+        ax.axhline(color="k", linestyle="--", alpha=0.2)             # Lines/Grid for easier comparison
+        ax.axhline(y=20, color="k", linestyle=":", alpha=0.2)
+        ax.axhline(y=-20, color="k", linestyle=":", alpha=0.2)
+        major_ticks = mdates.MinuteLocator(byminute=range(0, 60, 5))    # Set Locator to 5Minute steps
+        major_formatter = mdates.DateFormatter('%H:%M')                 # Format what to display
         ax.xaxis.set_major_locator(major_ticks)
         ax.xaxis.set_major_formatter(major_formatter)
         ax.set_ylabel(u"Acceleration \n [m/s²]")
         ax.set_ylim(-40, 40)
 
-    fig.suptitle("Acceleration data \n" + title)
+    # PLOT Medians
+    resample_interval = "5s"
+    acceleration.index = acceleration["time"]
+    acc_median = acceleration.resample(resample_interval).median()
+    axes[0].plot(acc_median["x"], linewidth=2, color="black", label="x - median:" + resample_interval)  # Medians
+    axes[1].plot(acc_median["y"], linewidth=2, color="red", label="y - median:" + resample_interval)
+    axes[2].plot(acc_median["z"], linewidth=2, color="blue", label="z - median:" + resample_interval)
+    fig.legend()
 
-    # PLOT MODE CHANGeS
+    # PLOT MODE CHANGES
     for ax in axes:
-        max_y = max(acceleration["x"].max(), acceleration["y"].max(), acceleration["z"].max())
         if mode_changes is not None:
             for i, mode_change in mode_changes.iterrows():
-                ax.axvline(x=mode_change["time"], ymin=-100, ymax=100, color="k", linestyle="--")
-                ax.text(s=" "+mode_change["mode"], x=mode_change["time"], y=max_y*0.7, rotation=90,
-                        ha='right',
-                        bbox=dict(boxstyle='square, pad=2', fc='none', ec='none'))
+                ax.axvline(x=mode_change["time"], color="k", linestyle="--")        # Draw Line
+                ax.text(s=mode_change["mode"], x=mode_change["time"],               # Draw Annotation
+                        y=20, rotation=90, ha='right',
+                        )
 
     return ax
 
