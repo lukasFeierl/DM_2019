@@ -8,10 +8,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-# Attention: use conda to install (I use Pycharm with a Conda Interpreter) Version 0.17.1
-# SOURCE: https://scitools.org.uk/cartopy/docs/latest/installing.html
-import cartopy.crs as ccrs
-import cartopy.io.img_tiles as map_img
+import mplleaflet
 
 
 def main():
@@ -77,81 +74,59 @@ def _get_mode_changes(markers):
 #%
 
 
-def plot_acceleration(acceleration, ax=None, mode_changes=None, title=""):
+def plot_acceleration(acceleration, mode_changes=None, title=""):
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    fig, axes = plt.subplots(3, sharex=True, sharey=True)
 
-    max_y = max(acceleration["x"].max(), acceleration["y"].max(), acceleration["z"].max())
+    # PLOT all Data
+    axes[0].plot(acceleration["time"], acceleration["x"], linewidth=1, color="gray", alpha=1)
+    axes[1].plot(acceleration["time"], acceleration["y"], linewidth=1, color="#FFCCCE", alpha=1)
+    axes[2].plot(acceleration["time"], acceleration["z"], linewidth=1, color="#86abf9", alpha=1)
 
-    ax.plot(acceleration["time"], acceleration["x"], linewidth=1, color="black", alpha=1)
-    ax.plot(acceleration["time"], acceleration["y"], linewidth=1, color="#FFCCCE", alpha=1)
-    ax.plot(acceleration["time"], acceleration["z"], linewidth=1, color="#86abf9", alpha=1)
-
+    # PLOT median
     resample_interval = "5s"
     acceleration = acceleration.copy()
     acceleration.index = acceleration["time"]
     acc_median = acceleration.resample(resample_interval).median()
 
-    ax.plot(acc_median["x"], linewidth=2, color="black", label="x - median: "+resample_interval)
-    ax.plot(acc_median["y"], linewidth=2, color="red", label="y - median: "+resample_interval)
-    ax.plot(acc_median["z"], linewidth=2, color="blue", label="z - median: "+resample_interval)
-    ax.legend()
+    for ax in axes:
+        ax.plot(acc_median["x"], linewidth=2, color="black", label="x - median: "+resample_interval)
+        ax.plot(acc_median["y"], linewidth=2, color="red", label="y - median: "+resample_interval)
+        ax.plot(acc_median["z"], linewidth=2, color="blue", label="z - median: "+resample_interval)
+        ax.legend(loc="upper right")
 
-    # acc_min = acceleration.resample("1s").min()
-    # acc_max = acceleration.resample("1s").max()
-    #
-    # ax.plot(acc_max["x"], linewidth=0.5, color="black", alpha=0.9)
-    # ax.plot(acc_max["y"], linewidth=0.5, color="red", alpha=0.9)
-    # ax.plot(acc_max["z"], linewidth=0.5, color="blue", alpha=0.9)
-    #
-    # ax.plot(acc_min["x"], linewidth=0.5, color="black", alpha=0.9)
-    # ax.plot(acc_min["y"], linewidth=0.5, color="red", alpha=0.9)
-    # ax.plot(acc_min["z"], linewidth=0.5, color="blue", alpha=0.9)
+        # FORMATTING
+        major_ticks = mdates.MinuteLocator(byminute=range(0, 60, 5))
+        major_formatter = mdates.DateFormatter('%H:%M')
+        ax.xaxis.set_major_locator(major_ticks)
+        ax.xaxis.set_major_formatter(major_formatter)
+        ax.set_ylabel(u"Acceleration \n [m/s²]")
+        ax.set_ylim(-40, 40)
 
-    major_ticks = mdates.MinuteLocator(byminute=range(0, 60, 5))
-    major_formatter = mdates.DateFormatter('%H:%M')
-    ax.xaxis.set_major_locator(major_ticks)
-    ax.xaxis.set_major_formatter(major_formatter)
-    ax.set_ylabel(u"Acceleration \n [m/s²]")
-    ax.set_title("Acceleration data \n" + title)
-    ax.set_ylim(-40, 40)
-    if mode_changes is not None:
-        for i, mode_change in mode_changes.iterrows():
-            ax.axvline(x=mode_change["time"], ymin=-100, ymax=100, color="k", linestyle="--")
-            ax.text(s=" "+mode_change["mode"], x=mode_change["time"], y=max_y*0.8, rotation=90,
-                    ha='right',
-                    bbox=dict(boxstyle='square, pad=2', fc='none', ec='none'))
+    fig.suptitle("Acceleration data \n" + title)
+
+    # PLOT MODE CHANGeS
+    for ax in axes:
+        max_y = max(acceleration["x"].max(), acceleration["y"].max(), acceleration["z"].max())
+        if mode_changes is not None:
+            for i, mode_change in mode_changes.iterrows():
+                ax.axvline(x=mode_change["time"], ymin=-100, ymax=100, color="k", linestyle="--")
+                ax.text(s=" "+mode_change["mode"], x=mode_change["time"], y=max_y*0.7, rotation=90,
+                        ha='right',
+                        bbox=dict(boxstyle='square, pad=2', fc='none', ec='none'))
 
     return ax
 
 
-def plot_position(positions, fig=None, subplot_nrRows=1, subplot_nrCols=1, subplot_index=1):
+def plot_position(positions):
 
-    if fig is None:
-        fig = plt.figure()
-    ax = fig.add_subplot(subplot_nrRows, subplot_nrCols, subplot_index, projection=ccrs.PlateCarree())
-    ax.coastlines()
+    fig, ax = plt.subplots()
     ax.scatter(positions["longitude"], positions["latitude"], color="red", s=5)
-    ax.scatter(positions["longitude"][:1], positions["latitude"][:1], color="black", s=100, label="start", marker="x")
+    ax.scatter(positions["longitude"][:1], positions["latitude"][:1], color="red", s=100, label="start", marker="X")
     ax.scatter(positions["longitude"][-1:], positions["latitude"][-1:], color="red", s=50, label="end")
 
-    ax.add_image(map_img.Stamen("terrain"),     # Service
-                 15,                            # Zoomlevel
-                 interpolation='spline36',      # Interpolation (more accurate)
-                 )
-    ax.legend()
-    plt.show()
+    mplleaflet.show()
     return ax
-
-
-# def plot_acceleration_and_gps(acceleration, positions, mode_changes=None, title=""):
-#
-#     fig = plt.figure(figsize=(10, 5))
-#     ax = plot_position(positions, fig, subplot_nrRows=1, subplot_nrCols=2)
-#     ax2 = fig.add_subplot(1, 2, 2)
-#     plot_acceleration(acceleration, ax, mode_changes=mode_changes, title=title)
-#
 
 #%%
 
