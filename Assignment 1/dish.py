@@ -45,7 +45,7 @@ def dish(data, mu=4, epsilon=0.1):
     ax.plot(point[0], point[1], "ro", markersize=10)
 
     algo._get_best_subspace(point)
-    -------------------------------------------------------------------
+    # -------------------------------------------------------------------
 
 
     # INITIALISE pq
@@ -71,24 +71,27 @@ def dish(data, mu=4, epsilon=0.1):
         # ----------
         d1, d2 = get_d(p_index, preference_vector)
 
+
         # get MU nearest neighbor of p
         # ----------
-        w_p = preference_vector[p_index]
-
         # TODO: In RESPECT TO SDIST !!!!
-        p_mu = _get_mu_nearest_neighbor_index(point, data, features=w_p, mu=mu)
+        d1_value = np.argsort(d1)[mu]
+        # p_mu = _get_mu_nearest_neighbor_index(point, data, features=w_p, mu=mu)
 
-        # Calculate ReachDist
-        # ----------
-        d1_mu = d1[p_mu]
-        d2_mu = d2[p_mu]
-        # if d1 are equal, d2 is MAXIMIZED
-        d1_same = (d1 == d1_mu)
-        d2[d1_same] = np.maximum(d2, d2_mu)[d1_same]
+        # p_mu =
 
-        # if d1 are not equal, take maximum d1
-        d1[~d1_same] = np.maximum(d1, d1_mu)[~d1_same]
-        d2[~d1_same] = np.maximum(d2, d2_mu)[~d1_same]
+
+        # # Calculate ReachDist
+        # # ----------
+        # d1_mu = d1[p_mu]
+        # d2_mu = d2[p_mu]
+        # # if d1 are equal, d2 is MAXIMIZED
+        # d1_same = (d1 == d1_mu)
+        # d2[d1_same] = np.maximum(d2, d2_mu)[d1_same]
+        #
+        # # if d1 are not equal, take maximum d1
+        # d1[~d1_same] = np.maximum(d1, d1_mu)[~d1_same]
+        # d2[~d1_same] = np.maximum(d2, d2_mu)[~d1_same]
 
         # Update PQ
         # ----------
@@ -108,14 +111,16 @@ def dish(data, mu=4, epsilon=0.1):
         # PLOT ANIMATION
         # ---------------------------------------------------------------
         ax.plot(data[p_index, 0], data[p_index, 1], "go", markersize=20)
-        # for j in range(pq.shape[0]):
+        for j in range(pq.shape[0]):
         #     ax.text(data[j, 0], data[j, 1] + 0.2, s=W_pq[j])
         #     ax.text(data[j, 0], data[j, 1] + 0.3, s=Lambda_pq[j])
         #     ax.text(data[j, 0], data[j, 1] + 0.4, s=is_included[j])
         #     ax.text(data[j, 0], data[j, 1] + 0.5, s=is_parallel[j])
         #     ax.text(data[j, 0], data[j, 1] + 0.2, s=d1[j])
         #     ax.text(data[j, 0], data[j, 1] + 0.4, s=d2[j])
-        plt.pause(0.5)
+            ax.text(data[j, 0], data[j, 1] + 0.4, s=pq[j, 1])
+            ax.text(data[j, 0], data[j, 1] + 0.2, s=pq[j, 2])
+        plt.pause(3)
 
         for nr in range(10):
             for txt in ax.texts:
@@ -221,30 +226,30 @@ if __name__ == '__main__':
     dataframe = pd.read_csv(fpath, sep=" ", comment="#", header=None)
     data = dataframe.values
 
-    # data = np.array([
-    #     [1, 6],
-    #     [2, 6],
-    #     [3, 6],
-    #     [4, 6],
-    #     [5, 6],
-    #     [1, 3], # CLUSTER 2
-    #     [2, 3],
-    #     [3, 3],
-    #     [4, 3],
-    #     [5, 3],
-    #     [6, 6], # CLUSTER 3
-    #     [6, 7],
-    #     [6, 8],
-    #     [6, 5],
-    #     [6, 4],
-    #     [6, 3],
-    # ])
-    # # -------------------------------------------------------------------
+    data = np.array([
+        [1, 6],
+        [2, 6],
+        [3, 6],
+        [4, 6],
+        [5, 6],
+        [1, 3], # CLUSTER 2
+        [2, 3],
+        [3, 3],
+        [4, 3],
+        [5, 3],
+        [6, 6], # CLUSTER 3
+        [6, 7],
+        [6, 8],
+        [6, 5],
+        [6, 4],
+        [6, 3],
+    ])
+    # -------------------------------------------------------------------
 
     # Algo
     # -------------------------------------------------------------------
 
-    mu = 40
+    mu = 3
     epsilon = 0.1
 
     dish(data=data, mu=mu, epsilon=epsilon)
