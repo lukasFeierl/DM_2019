@@ -9,6 +9,10 @@ import matplotlib.pyplot as plt
 
 class DiSH():
     def __init__(self, epsilon, mu):
+        print("Starting Dish.")
+        print("epsiolon: \t", epsilon)
+        print("mu: \t\t", mu)
+
         self.epsilon = epsilon
         self.mu = mu
         self.data = None

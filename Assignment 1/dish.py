@@ -18,7 +18,8 @@ def dish(data, mu=4, epsilon=0.1):
     algo.data = data
 
     preference_vector = algo.fit(data)
-
+    pq = init_pq()
+    index = 0
 
     # PLOT PREFERNCE VECTORs
     # -------------------------------------------------------------------
@@ -27,39 +28,26 @@ def dish(data, mu=4, epsilon=0.1):
 
     fig, ax = plt.subplots()
     ax.plot(data[:, 0], data[:, 1], "ko", markersize=10)
-    ax.plot(pref_ax0[:, 0], pref_ax0[:, 1], "r^", label="w_up == True", markersize=10)
-    ax.plot(pref_ax1[:, 0], pref_ax1[:, 1], "y>", label="w_right == True", markersize=10)
+    # ax.plot(pref_ax0[:, 0], pref_ax0[:, 1], "r^", label="w_up == True", markersize=10)
+    # ax.plot(pref_ax1[:, 0], pref_ax1[:, 1], "y>", label="w_right == True", markersize=10)
+    #
+    # # Plot neighbors of a point
+    # # -------------------------
+    # point = data[4]
+    # ax.plot(point[0], point[1], "go", markersize=10)
+    #
+    # neighbors_0 = algo._get_neighbors(point, features=[0])
+    # neighbors_1 = algo._get_neighbors(point, features=[1])
+    # neighbors_01 = algo._get_neighbors(point, features=[0, 1])
+    #
+    # ax.plot(neighbors_0[:, 0], neighbors_0[:, 1], "bx", markersize=10)
+    # ax.plot(neighbors_1[:, 0], neighbors_1[:, 1], "gx", markersize=10)
+    # ax.plot(neighbors_01[:, 0], neighbors_01[:, 1], "go", markersize=15)
+    # ax.plot(point[0], point[1], "ro", markersize=10)
+    #
+    # algo._get_best_subspace(point)
+    # # -------------------------------------------------------------------
 
-    # Plot neighbors of a point
-    # -------------------------
-    point = data[4]
-    ax.plot(point[0], point[1], "go", markersize=10)
-
-    neighbors_0 = algo._get_neighbors(point, features=[0])
-    neighbors_1 = algo._get_neighbors(point, features=[1])
-    neighbors_01 = algo._get_neighbors(point, features=[0, 1])
-
-    ax.plot(neighbors_0[:, 0], neighbors_0[:, 1], "bx", markersize=10)
-    ax.plot(neighbors_1[:, 0], neighbors_1[:, 1], "gx", markersize=10)
-    ax.plot(neighbors_01[:, 0], neighbors_01[:, 1], "go", markersize=15)
-    ax.plot(point[0], point[1], "ro", markersize=10)
-
-    algo._get_best_subspace(point)
-    # -------------------------------------------------------------------
-
-
-    # INITIALISE pq
-    # -------------------------------------------------------------------
-    pq = np.zeros((data.shape[0], 3))
-    reach_dist_d1 = np.full(data.shape[0], fill_value=np.NaN)
-    reach_dist_d2 = reach_dist_d1.copy()
-    index = np.arange(0, data.shape[0])
-
-    pq[:, 0] = index
-    pq[:, 1] = reach_dist_d1
-    pq[:, 2] = reach_dist_d2
-    index = 0
-    # -------------------------------------------------------------------
 
     # Compute Reachability by Walk
     # -------------------------------------------------------------------
@@ -68,23 +56,21 @@ def dish(data, mu=4, epsilon=0.1):
         point = data[p_index]
 
         # calculate SDists
-        # ----------
+        # ------------------
         d1, d2 = get_d(p_index, preference_vector)
 
-
-        # get MU nearest neighbor of p
-        # ----------
-        # TODO: In RESPECT TO SDIST !!!!
-        d1_value = np.argsort(d1)[mu]
-        # p_mu = _get_mu_nearest_neighbor_index(point, data, features=w_p, mu=mu)
-
-        # p_mu =
-
-
+        # # get MU nearest neighbor of p
+        # # ----------
+        # # TODO: In RESPECT TO SDIST !!!!
+        # d_order_index = np.lexsort((d2, d1))
+        # mu_index = d_order_index[mu]
+        #
+        #
         # # Calculate ReachDist
         # # ----------
-        # d1_mu = d1[p_mu]
-        # d2_mu = d2[p_mu]
+        # d1_mu = d1[mu_index]
+        # d2_mu = d2[mu_index]
+        #
         # # if d1 are equal, d2 is MAXIMIZED
         # d1_same = (d1 == d1_mu)
         # d2[d1_same] = np.maximum(d2, d2_mu)[d1_same]
@@ -93,48 +79,61 @@ def dish(data, mu=4, epsilon=0.1):
         # d1[~d1_same] = np.maximum(d1, d1_mu)[~d1_same]
         # d2[~d1_same] = np.maximum(d2, d2_mu)[~d1_same]
 
-        # Update PQ
-        # ----------
-        # ADD new VALUES to d1 d2 of each point
-        pq_sorted = pq[np.argsort(pq[:, 0])]
-        pq_sorted = update_pq(pq_sorted, d1, d2)
-        pq = pq_sorted[np.array(pq[:,0], dtype="int64")]
-
-        # Sort pq
-        # ----------
-        # SORT PQs
-        pq_sort = pq[index+1:]
-        pq_sort = pq_sort[pq_sort[:, 2].argsort()]
-        pq_sort = pq_sort[pq_sort[:, 1].argsort(kind='mergesort')]
-        pq[index+1:] = pq_sort
+        pq = update_pq(pq, d1, d2)
+        pq = sort_pq(pq, index)
 
         # PLOT ANIMATION
         # ---------------------------------------------------------------
-        ax.plot(data[p_index, 0], data[p_index, 1], "go", markersize=20)
-        for j in range(pq.shape[0]):
-        #     ax.text(data[j, 0], data[j, 1] + 0.2, s=W_pq[j])
-        #     ax.text(data[j, 0], data[j, 1] + 0.3, s=Lambda_pq[j])
-        #     ax.text(data[j, 0], data[j, 1] + 0.4, s=is_included[j])
-        #     ax.text(data[j, 0], data[j, 1] + 0.5, s=is_parallel[j])
-        #     ax.text(data[j, 0], data[j, 1] + 0.2, s=d1[j])
-        #     ax.text(data[j, 0], data[j, 1] + 0.4, s=d2[j])
-            ax.text(data[j, 0], data[j, 1] + 0.4, s=pq[j, 1])
-            ax.text(data[j, 0], data[j, 1] + 0.2, s=pq[j, 2])
-        plt.pause(3)
-
-        for nr in range(10):
-            for txt in ax.texts:
-                txt.set_visible(False)
-                txt.remove()
-        # ---------------------------------------------------------------
+        ax.plot(data[p_index, 0], data[p_index, 1], "go", markersize=10)
+        # ax.plot(data[mu_index, 0], data[mu_index, 1], "rx", markersize=20)
+        # for j in range(pq.shape[0]):
+        #     ax.text(data[j, 0], data[j, 1] + 0.012, s="w(p,q): "+str(W_pq[j]))
+        #     ax.text(data[j, 0], data[j, 1] + 0.006, s=u"{\lambda}(p,q): "+str(Lambda_pq[j]))
+        #     ax.text(data[j, 0], data[j, 1] + 0.007, s="included: "+str(is_included[j]))
+        #     ax.text(data[j, 0], data[j, 1] + 0.010, s="parallel: "+str(is_parallel[j]))
+        #     ax.text(data[j, 0], data[j, 1] + 0.002, s="d1: "+str(d1[j]))
+        #     ax.text(data[j, 0], data[j, 1] + 0.004, s="d2: "+str(d2[j]))
+        plt.pause(0.2)
+        #
+        # for nr in range(10):
+        #     for txt in ax.texts:
+        #         txt.set_visible(False)
+        #         txt.remove()
+        # # ---------------------------------------------------------------
 
     fig, ax = plt.subplots()
     ax.plot(pq[:, 1], "bo")
     return True
 
 
-def get_d(p_index, preference_vector):
+def init_pq():
+    pq = np.zeros((data.shape[0], 3))
+    reach_dist_d1 = np.full(data.shape[0], fill_value=np.NaN)
+    reach_dist_d2 = reach_dist_d1.copy()
+    index = np.arange(0, data.shape[0])
 
+    pq[:, 0] = index
+    pq[:, 1] = reach_dist_d1
+    pq[:, 2] = reach_dist_d2
+    return pq
+
+
+def update_pq(pq, d1, d2):
+    # ADD new VALUES to d1 d2 of each point
+    pq_sorted = pq[np.argsort(pq[:, 0])]
+    pq_sorted = update_pq(pq_sorted, d1, d2)
+    pq = pq_sorted[np.array(pq[:, 0], dtype="int64")]
+    return pq
+
+
+def sort_pq(pq, index):
+    pq_sort = pq[index + 1:]
+    pq_argsort = np.lexsort((pq_sort[:, 2], pq_sort[:, 1]))
+    pq[index + 1:] = pq_sort[pq_argsort]
+    return pq
+
+
+def get_d(p_index, preference_vector):
     w_p = preference_vector[p_index]
     W_q = preference_vector
     W_pq = W_q * w_p
@@ -151,7 +150,7 @@ def get_d(p_index, preference_vector):
     W_inverse = ~W_pq
     d2 = DIST_v2(data[p_index], data, W_inverse)
     d1 = Lambda_pq + delta_pq
-    return (d1, d2)
+    return (d1, d2)  # np.vstack()
 
 
 def _get_mu_nearest_neighbor_index(point, data, features, mu):
@@ -161,11 +160,9 @@ def _get_mu_nearest_neighbor_index(point, data, features, mu):
                          "This is unreasonable. Please set it to a smaller (integer) value"
                          )
     # -----------------------
-    dist = DIST(point[features], data[:, features])      # data[features] is a projection
+    dist = DIST(point[features], data[:, features])  # data[features] is a projection
     sorting_index = dist.argsort()
-    return sorting_index[mu-1]
-
-
+    return sorting_index[mu - 1]
 
 
 def update_pq(pq, d1, d2):
@@ -189,7 +186,7 @@ def update_pq(pq, d1, d2):
 
 
 def DIST_v2(point, data, feature_matrix):
-    dist_matrix = (point - data)**2
+    dist_matrix = (point - data) ** 2
     projected_dist_matrix = np.multiply(dist_matrix, feature_matrix)
     final_dist_vector = np.sqrt(np.sum(projected_dist_matrix, axis=1))
     return final_dist_vector
@@ -232,12 +229,12 @@ if __name__ == '__main__':
         [3, 6],
         [4, 6],
         [5, 6],
-        [1, 3], # CLUSTER 2
+        [1, 3],  # CLUSTER 2
         [2, 3],
         [3, 3],
         [4, 3],
         [5, 3],
-        [6, 6], # CLUSTER 3
+        [6, 6],  # CLUSTER 3
         [6, 7],
         [6, 8],
         [6, 5],
