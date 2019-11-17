@@ -6,62 +6,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_reference_vectors(data, preference_vector):
-    pref_ax0 = data[preference_vector[:, 0]]
-    pref_ax1 = data[preference_vector[:, 1]]
-
-    fig, ax = plt.subplots()
-    ax.plot(data[:, 0], data[:, 1], "ko", markersize=10)
-    ax.plot(pref_ax0[:, 0], pref_ax0[:, 1], "r^", label="w_up == True", markersize=10)
-    ax.plot(pref_ax1[:, 0], pref_ax1[:, 1], "y>", label="w_right == True", markersize=10)
-    return fig, ax
-
-
-def plot_neighbors(data, point, algo, ax):
-    if ax is None:
-        fig, ax = plt.subplots()
-        ax.plot(data[:, 0], data[:, 1], "ko", markersize=10)
-
-    ax.plot(point[0], point[1], "go", markersize=10)
-    neighbors_0 = algo._get_neighbors(point, features=[0])
-    neighbors_1 = algo._get_neighbors(point, features=[1])
-    neighbors_01 = algo._get_neighbors(point, features=[0, 1])
-
-    ax.plot(neighbors_0[:, 0], neighbors_0[:, 1], "bx", markersize=10)
-    ax.plot(neighbors_1[:, 0], neighbors_1[:, 1], "gx", markersize=10)
-    ax.plot(neighbors_01[:, 0], neighbors_01[:, 1], "go", markersize=15)
-    ax.plot(point[0], point[1], "ro", markersize=10)
-
-    algo._get_best_subspace(point)
-    return fig, ax
-
 def dish(data, mu=4, epsilon=0.1):
     DO_PLOT = True
     from dish_class import DiSH
     self = DiSH(epsilon=epsilon, mu=mu)
+
+    # -------------------------------------------------------------------
     self.data = data
     self.nr_of_features = 2
 
-    preference_vector = self._get_preference_vectors()
-    pq = init_pq(data)
-    index = 0
-
-    if DO_PLOT:
-        fig, ax = plot_data(data)
-
-    # Compute Reachability by Walk
+    # ALGO
     # -------------------------------------------------------------------
+    preference_vector = self._get_preference_vectors()
+    pq = self.init_pq()
+
     for index in range(pq.shape[0]):
         p_index = int(pq[index, 0])
+        d1, d2 = self.get_subspace_distance(p_index, preference_vector)
 
-        # calculate SDists
-        # ------------------
-        d1, d2 = get_SDist(p_index, preference_vector, epsilon, data)
         # TODO:  get MU nearest neighbor of p in respect to SDIST
-        pq = update_pq(pq, d1, d2)
-        pq = sort_pq(pq, index)
-
-
+        pq = self.update_pq(pq, d1, d2)
+        pq = self.sort_pq(pq, index)
         if DO_PLOT:
             # PLOT ANIMATION
             # ---------------------------------------------------------------
@@ -83,16 +48,47 @@ def dish(data, mu=4, epsilon=0.1):
             #         txt.remove()
             # # ---------------------------------------------------------------
             pass
-        continue
 
-    cluster_list = extract_cluster(pq, preference_vector, data, epsilon)
+    cluster_list = self.extract_cluster(pq, preference_vector)
+    # -------------------------------------------------------------------
+
+    cluster_list = self.fit(data=data)
 
     if DO_PLOT:
         plot_reference_vectors(data, preference_vector)
         plot_cluster(cluster_list)
         plot_reachablity_plot(pq)
 
+    print(self)
     return cluster_list
+
+
+def plot_reference_vectors(data, preference_vector):
+    pref_ax0 = data[preference_vector[:, 0]]
+    pref_ax1 = data[preference_vector[:, 1]]
+
+    fig, ax = plt.subplots()
+    ax.plot(data[:, 0], data[:, 1], "ko", markersize=10)
+    ax.plot(pref_ax0[:, 0], pref_ax0[:, 1], "r^", label="w_up == True", markersize=10)
+    ax.plot(pref_ax1[:, 0], pref_ax1[:, 1], "y>", label="w_right == True", markersize=10)
+    return fig, ax
+
+
+# def plot_neighbors(data, point, algo, ax):
+#     if ax is None:
+#         fig, ax = plt.subplots()
+#         ax.plot(data[:, 0], data[:, 1], "ko", markersize=10)
+#
+#     ax.plot(point[0], point[1], "go", markersize=10)
+#     neighbors_0 = algo._get_neighbors(point, features=[0])
+#     neighbors_1 = algo._get_neighbors(point, features=[1])
+#     neighbors_01 = algo._get_neighbors(point, features=[0, 1])
+#
+#     ax.plot(neighbors_0[:, 0], neighbors_0[:, 1], "bx", markersize=10)
+#     ax.plot(neighbors_1[:, 0], neighbors_1[:, 1], "gx", markersize=10)
+#     ax.plot(neighbors_01[:, 0], neighbors_01[:, 1], "go", markersize=15)
+#     ax.plot(point[0], point[1], "ro", markersize=10)
+#     return fig, ax
 
 
 def plot_data(data):
@@ -165,7 +161,7 @@ def get_wpq(p_index, preference_vector):
     return W_pq
 
 
-def get_SDist(p_index, preference_vector, epsilon, data):
+def calculate_SDist(p_index, preference_vector, epsilon, data):
     w_p = preference_vector[p_index]
     W_q = preference_vector
     W_pq = W_q * w_p
@@ -208,12 +204,10 @@ def update_sorted_pq(pq, d1, d2):
 def DIST_v2(point, data, feature_matrix):
     dist_matrix = (point - data) ** 2
     projected_dist_matrix = np.multiply(dist_matrix, feature_matrix)
-
     if len(data.shape) == 1:
         final_dist_vector = np.sqrt(np.sum(projected_dist_matrix))
     else:
         final_dist_vector = np.sqrt(np.sum(projected_dist_matrix, axis=1))
-
     return final_dist_vector
 
 
