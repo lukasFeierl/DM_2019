@@ -1,7 +1,3 @@
-
-from dish import dish
-
-
 import pandas as pd
 
 
@@ -33,7 +29,9 @@ data = dataframe.values
 #%%
 # Run DiSH
 # -------------------------------------------------------------------
-dish(data=data, mu=mu, epsilon=epsilon)
+from dish_class import DiSH
+self = DiSH(mu=mu, epsilon=epsilon)
+cl_list = self.fit(data=data, SHOW_PLOT=True)
 # -------------------------------------------------------------------
 
 

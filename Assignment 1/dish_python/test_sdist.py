@@ -29,7 +29,7 @@ fig, ax = plt.subplots()
 ax.plot(data[:, 0], data[:, 1], "bo")
 ax.plot(point[0], point[1], "ro")
 
-nr_neighbors_per_dim = algo.__get_neighbor_count(point)
+nr_neighbors_per_dim = algo._get_neighbor_count(point)
 candidate_features = algo._get_candidate_attributes(nr_neighbors_per_dim)
 best_subspace = algo._best_first_search(point, nr_neighbors_per_dim, candidate_features)
 
