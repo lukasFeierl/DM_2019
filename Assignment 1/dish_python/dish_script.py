@@ -38,30 +38,28 @@ def DIST(point, data):
 
 def get_neighbors(point, data, features, epsilon):
     """ returns all neighbors of a point, if projected along features in a radius epsilon"""
-    data_projected = data[:, features]           # data[:, features] is a projection
-    point_projected = point[features]            # point[features] is a projection
-    is_near = DIST(point_projected, data_projected) <= epsilon
+    is_near = DIST(data[:, features], point[features]) <= epsilon         # point[features] = projection to one feature
     return data[is_near]
 
 
 def get_best_subspace(point, data, mu, epsilon):
-    """ calculates the best subspace for a given point. An attribute contributes to the subspace if enough
+    """ calculates the best subspace for a given point. An attribute/feature contributes to the best subspace if enough
     elements are in the neighborhood of the point in a radius epsilon. """
 
-    # initialise some values
-    nr_of_features = point.shape[0]
-    neighbor_count = np.zeros(nr_of_features)
+    # initialising
+    nr_of_dims = point.shape[0]                 # feature dimensions
 
     # count neighbors in each (1D) feature dimension
-    for feature in range(nr_of_features):
+    neighbor_count = np.zeros(nr_of_dims)
+    for feature in range(nr_of_dims):
         neighbors = get_neighbors(point, data=data, features=[feature], epsilon=epsilon)
         neighbor_count[feature] = len(neighbors)
 
-    # Get Canditate Attributes
+    # get all candidate attributes
     is_candidate = (neighbor_count >= mu)
     candidate_features = [i for i, value in enumerate(is_candidate) if value == True]
 
-    # Apply best-First_search to find the best subpace
+    # Apply best-First_search to find the best subspace
     best_subspace = []
     for index in range(len(candidate_features)):
 
@@ -80,13 +78,13 @@ def get_best_subspace(point, data, mu, epsilon):
 
 def get_preference_vectors(data, mu, epsilon):
     """ calculates the preference vector w(p) of each point, assigning "True" to each feature which is in the "best
-    subspace" - thus relevant for clustering.
-    The number of zero-values in the preference vector is the subspace dimensionality.
+    subspace" - thus relevant for clustering - and "False" otherwise.
+    The number of False-values in the preference vector is the called the subspace dimensionality Lambda.
     """
-    preference_vector = np.zeros(data.shape, dtype=bool)    # initialising - stores w(p) for each point
+    # initialising - stores w(p) for each point
+    preference_vector = np.zeros(data.shape, dtype=bool)
 
     for point_index, point in enumerate(data):
-
         # calculate which features are relevant
         is_best_subspace = get_best_subspace(point, data, mu=mu, epsilon=epsilon)
         preference_vector[point_index][is_best_subspace] = True
@@ -97,13 +95,11 @@ def get_preference_vectors(data, mu, epsilon):
 def DIST_projected(point, data, preference_matrix):
     """ calculates the euclidean distance, but uses the preference_vectors to project the data to lower dimension.
     Returns distances as a vector for each distance p-q for each point q in the data"""
-    # Innerpart inside the sum
     dist_matrix = (point - data) ** 2
 
-    # Projetc to dimensions specified in preference Matrix
+    # Project to feature dimensions specified in preference Matrix
     projected_dist_matrix = np.multiply(dist_matrix, preference_matrix)
 
-    # return result after sum and squareroot
     if len(data.shape) == 1:
         dist_vector = np.sqrt(np.sum(projected_dist_matrix))
     else:
@@ -315,6 +311,6 @@ def plot_cluster(cluster_list, mu):
     ax.legend(loc="upper right")
     return fig, ax
 
-plot_reference_vectors(data, preference_vector)
-plot_reachablity_plot(pq)
+# plot_reference_vectors(data, preference_vector)
+# plot_reachablity_plot(pq)
 plot_cluster(cluster_list, mu=mu)
