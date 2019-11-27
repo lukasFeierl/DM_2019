@@ -14,7 +14,7 @@ def test_distance(dataset, p_index, q_index, result):
     point = dataset[p_index]
     data = dataset[q_index:q_index+1]
 
-    distance = algo.__DIST(point, data)
+    distance = algo._DIST(point, data)
 
     if result != distance[0]:
         plt.plot(dataset[:, 0], dataset[:, 1], 'ko', alpha=0.5)

@@ -4,8 +4,6 @@ import pandas as pd
 #%%
 # DATASETS
 # -------------------------------------------------------------------
-
-# 3 Lines
 fpath = r"../datasets/simple_lines.csv"
 mu = 3
 epsilon = 0.1
@@ -14,7 +12,6 @@ epsilon = 0.1
 fpath = r"../datasets/mouse.csv"
 mu = 40
 epsilon = 0.1
-
 # -------------------------------------------------------------------
 
 
@@ -32,6 +29,8 @@ data = dataframe.values
 from dish_class import DiSH
 self = DiSH(mu=mu, epsilon=epsilon)
 cl_list = self.fit(data=data, SHOW_PLOT=True)
+self.plot_reference_vectors()
+self.plot_reachablity_plot()
 # -------------------------------------------------------------------
 
 

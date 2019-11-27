@@ -34,7 +34,7 @@ candidate_features = algo._get_candidate_attributes(nr_neighbors_per_dim)
 best_subspace = algo._best_first_search(point, nr_neighbors_per_dim, candidate_features)
 
 print(nr_neighbors_per_dim)
-print(len(algo.__get_neighbors(point, features=[0, 1])))
+print(len(algo._get_neighbors(point, features=[0, 1])))
 print(candidate_features)
 print(best_subspace)
 
