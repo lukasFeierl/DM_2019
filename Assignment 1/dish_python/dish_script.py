@@ -6,15 +6,35 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------------------------
 # PARAMETERS
 # -------------------------------------------------------------------
+# Problems:
+# - (lines_and_nois.csv)    TODO: not able to connect lines... (?!!) At least if they are not axis-parallel.
+# - Hard to find clusters that are not parallel to axes (lines_and_nois.csv)
+# - hard to detect varying densities
+# - how to set mu and epsilon (when not knowing the result) ?!!
+# - mu-nearest neighbor not working in our code?
+# - maybe the problem is noise??
 
-fpath = r"../datasets/simple_lines.csv"
-mu = 3
-epsilon = 0.1
+# - maybe more useful in more dimension, where overlaying does not occur so often ??
 
 
-fpath = r"../datasets/mouse.csv"
-mu = 40
-epsilon = 0.1
+sep = ";"
+fpath = r"../datasets/lines_and_noise.csv"
+# best looking result: mu=90; eps=0.1
+# best logical result: mu= 2; eps=0.005
+mu = 2              # 50
+epsilon = 0.005      # 0.05
+
+#
+# sep = " "
+# fpath = r"../datasets/simple_lines.csv"
+# mu = 3
+# epsilon = 0.1
+#
+#
+# sep = " "
+# fpath = r"../datasets/mouse.csv"
+# mu = 40                     # 40
+# epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
 
 # -------------------------------------------------------------------
 
@@ -27,7 +47,8 @@ epsilon = 0.1
 # -------------------------------------------------------------------
 
 # import data
-dataframe = pd.read_csv(fpath, sep=" ", comment="#", header=None)
+dataframe = pd.read_csv(fpath, sep=sep, comment="#", header=None)
+dataframe = dataframe.dropna(axis=1,how='all')
 data = dataframe.values
 
 
@@ -36,15 +57,50 @@ def DIST(point, data):
     return np.sqrt(np.sum((point - data) ** 2, axis=1))
 
 
+# # Test-plot DIST
+# # ----------------
+# fig, ax = plt.subplots()
+# p = data[0]
+# q = data[1]
+# ax.plot(data[:, 0], data[:, 1], 'k.')
+# ax.plot(p[0], p[1], 'ro', label="p")
+# ax.plot(q[0], q[1], 'rx', label="q")
+# ax.plot([p[0], q[0]], [p[1], q[1]], label="DIST(p,q)"+str(DIST(p, q[np.newaxis])))
+# ax.plot([p[0], p[0]], [p[1], p[1]], label="DIST(p,p)"+str(DIST(p, p[np.newaxis])))
+# ax.legend()
+# # ----------------
+
+
 def get_neighbors(point, data, features, epsilon):
     """ returns all neighbors of a point, if projected along features in a radius epsilon"""
     is_near = DIST(data[:, features], point[features]) <= epsilon         # point[features] = projection to one feature
     return data[is_near]
 
+# # Test-plot Neighbors
+# # ----------------
+# p = data[0]
+# fig, ax = plt.subplots()
+# fig.suptitle("Neighbors of point p")
+# ax.plot(data[:, 0], data[:, 1], 'k.')
+# ax.plot(p[0], p[1], 'ro', label="Point p")
+# for features in [[0], [1], [0,1]]:
+#     neighbors = get_neighbors(p, data, features=features, epsilon=epsilon)
+#     ax.plot(neighbors[:, 0], neighbors[:, 1], '.', label="feature-dimension: "+str(features))
+#
+# plt.legend()
+# # ----------------
 
-def get_best_subspace(point, data, mu, epsilon):
+
+def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
     """ calculates the best subspace for a given point. An attribute/feature contributes to the best subspace if enough
     elements are in the neighborhood of the point in a radius epsilon. """
+
+    #-----------------------------
+    if TEST_PLOT:
+        fig, ax = plt.subplots()
+        ax.plot(data[:,0], data[:,1], "k.")
+        ax.plot(point[0], point[1], "ro")
+    #-----------------------------
 
     # initialising
     nr_of_dims = point.shape[0]                 # feature dimensions
@@ -54,6 +110,11 @@ def get_best_subspace(point, data, mu, epsilon):
     for feature in range(nr_of_dims):
         neighbors = get_neighbors(point, data=data, features=[feature], epsilon=epsilon)
         neighbor_count[feature] = len(neighbors)
+
+        # -----------------------------
+        if TEST_PLOT:
+            ax.plot(neighbors[:,0], neighbors[:,1], ".", label="feature: "+ str(feature)+" (#"+str(len(neighbors))+")")
+        #-----------------------------
 
     # get all candidate attributes
     is_candidate = (neighbor_count >= mu)
@@ -73,7 +134,21 @@ def get_best_subspace(point, data, mu, epsilon):
         if len(neighbors) >= mu:
             best_subspace = proposed_combination
 
+    # -----------------------------
+    if TEST_PLOT:
+        neighbors = get_neighbors(point, data=data, features=best_subspace, epsilon=epsilon)
+        ax.plot(neighbors[:, 0], neighbors[:, 1], '.', label="best subspace: "+ str(best_subspace)+" (#"+str(len(neighbors))+")")
+        ax.legend()
+    # -----------------------------
+
     return best_subspace
+
+
+# # Test-plot Subspace
+# # --------------------
+# point = data[0]
+# get_best_subspace(point, data, mu, epsilon, TEST_PLOT=True)
+# # --------------------
 
 
 def get_preference_vectors(data, mu, epsilon):
@@ -92,6 +167,12 @@ def get_preference_vectors(data, mu, epsilon):
     return preference_vector
 
 
+# Test-plot Preference Vectors
+# --------------------
+# done late with plot_preference_vectors()
+# --------------------
+
+
 def DIST_projected(point, data, preference_matrix):
     """ calculates the euclidean distance, but uses the preference_vectors to project the data to lower dimension.
     Returns distances as a vector for each distance p-q for each point q in the data"""
@@ -106,6 +187,22 @@ def DIST_projected(point, data, preference_matrix):
         dist_vector = np.sqrt(np.sum(projected_dist_matrix, axis=1))
 
     return dist_vector
+
+
+# # Test-plot DIST_projected
+# # ----------------
+# fig, ax = plt.subplots()
+# p = data[0]
+# q = data[1]
+#
+# ax.plot(data[:, 0], data[:, 1], 'k.')
+# ax.plot(p[0], p[1], 'ro', label="p")
+# ax.plot(q[0], q[1], 'rx', label="q")
+# ax.plot([p[0], q[0]], [p[1], p[1]], label="DIST_[0] (p,q)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[True, False])))
+# ax.plot([p[0], p[0]], [p[1], q[1]], label="DIST_[1] (p,p)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[False, True])))
+# ax.plot([p[0], q[0]], [p[1], q[1]], label="DIST_[0,1] (p,p)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[True, True])))
+# ax.legend()
+# # ----------------
 
 
 def get_subspace_distance(data, p_index, preference_vector, epsilon):
@@ -139,6 +236,27 @@ def get_subspace_distance(data, p_index, preference_vector, epsilon):
     return d1, d2
 
 
+# # Plot Test : Subspace Distance
+# # ------------------------------
+# p_index = 0
+#
+# point = data[p_index]
+# preference_vector = get_preference_vectors(data, mu, epsilon)
+# sdist_p = get_subspace_distance(data, p_index, preference_vector, epsilon)
+#
+# fig, ax = plt.subplots()
+# cmaps = ["Reds_r", "Blues_r", "Greens_r"]
+# for i in range(3):
+#     indices = np.argwhere(sdist_p[0] == i)
+#     print(i, len(indices))
+#     ax.scatter(x=data[indices, 0], y=data[indices, 1], c=sdist_p[1][indices], s=20, cmap=cmaps[i])
+#
+# ax.plot(point[0], point[1], 'ro', label="p")
+# fig.suptitle("COLOR - MAP\nd1=0 (red),   d1=1 (blue),   d1=2 (green)\n Darker colour means lower d2")
+# ax.plot()
+# # ------------------------------
+
+
 def get_reachability_distance(d1, d2, mu):
     """ to avoid single link effect, the sdist of the mu nearest neighbor of the point in respect to p is used
     as minimum sdist. If the point is in a cluster with less then mu neighbors this then results in beeing a
@@ -148,7 +266,7 @@ def get_reachability_distance(d1, d2, mu):
     d_argsort = np.lexsort((d[:, 1], d[:, 0]))  # Sort according to d1, then d2
     d_sorted = d[d_argsort]
     d_mu = d_sorted[mu]
-    d_sorted[mu] = d_mu       # is equal to max(sdist(p, r), sdist(p, mu))
+    d_sorted[:mu] = d_mu       # is equal to max(sdist(p, r), sdist(p, mu))
     d[d_argsort] = d_sorted
 
     return d[:, 0], d[:, 1]
@@ -171,6 +289,7 @@ def update_pq(pq, d1, d2):
     pq[:, 2][~d1_is_equal] = d2_old_new[is_minimum]
 
     return pq
+
 
 def get_pq(data, preference_vector, epsilon, mu):
 
@@ -269,6 +388,7 @@ cluster_list = dish(data, epsilon=epsilon, mu=mu)
 # ------------------------
 #  PLOTTING
 # ------------------------
+
 
 def plot_reference_vectors(data, preference_vector):
     pref_ax0 = data[preference_vector[:, 0]]
