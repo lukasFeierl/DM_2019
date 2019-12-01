@@ -7,34 +7,35 @@ import matplotlib.pyplot as plt
 # PARAMETERS
 # -------------------------------------------------------------------
 # Problems:
-# - (lines_and_nois.csv)    TODO: not able to connect lines... (?!!) At least if they are not axis-parallel.
-# - Hard to find clusters that are not parallel to axes (lines_and_nois.csv)
+# - (lines_and_nois.csv)    TODO: not able to connect lines... At least if they are not axis-parallel.
+# - Hard to find clusters that are not parallel to axes (lines_and_noise.csv)
 # - hard to detect varying densities
 # - how to set mu and epsilon (when not knowing the result) ?!!
 # - mu-nearest neighbor not working in our code?
 # - maybe the problem is noise??
-
 # - maybe more useful in more dimension, where overlaying does not occur so often ??
-
-
-sep = ";"
-fpath = r"../datasets/lines_and_noise.csv"
-# best looking result: mu=90; eps=0.1
-# best logical result: mu= 2; eps=0.005
-mu = 2              # 50
-epsilon = 0.005      # 0.05
-
 #
+# -------------------------------------------------------------------
+
+
+# sep = ";"
+# fpath = r"../datasets/lines_and_noise.csv"
+# # best looking result: mu=90; eps=0.1
+# # best logical result: mu= 2; eps=0.005
+# mu = 2              # 50
+# epsilon = 0.005      # 0.05
+
+
 # sep = " "
 # fpath = r"../datasets/simple_lines.csv"
 # mu = 3
 # epsilon = 0.1
-#
-#
-# sep = " "
-# fpath = r"../datasets/mouse.csv"
-# mu = 40                     # 40
-# epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
+
+
+sep = " "
+fpath = r"../datasets/mouse.csv"
+mu = 40                     # 40
+epsilon = 0.1              # with 0.12 you just look for 0.12 wide circles in the data :(
 
 # -------------------------------------------------------------------
 
@@ -272,7 +273,33 @@ def get_reachability_distance(d1, d2, mu):
     return d[:, 0], d[:, 1]
 
 
+# Plot Test : Reachablity Distance
+# ------------------------------
+def plot_sdist(point, data, sdist_p, fig, ax):
+    cmaps = ["Reds_r", "Blues_r", "Greens_r"]
+    for i in range(3):
+        indices = np.argwhere(sdist_p[0] == i)
+        print(i, len(indices))
+        ax.scatter(x=data[indices, 0], y=data[indices, 1], c=sdist_p[1][indices], s=20, cmap=cmaps[i])
+
+    ax.plot(point[0], point[1], 'ro', label="p")
+    fig.suptitle("COLOR - MAP\nd1=0 (red),   d1=1 (blue),   d1=2 (green)\n Darker colour means lower d2")
+    ax.plot()
+
+# p_index = 0
+#
+# point = data[p_index]
+# preference_vector = get_preference_vectors(data, mu, epsilon)
+# d1, d2 = get_subspace_distance(data, p_index, preference_vector, epsilon)
+# sdist_p = get_reachability_distance(d1, d2, mu=mu)
+#
+# fig, ax = plt.subplots()
+# plot_sdist(point, data, sdist_p, fig, ax)
+# ------------------------------
+
+
 def update_pq(pq, d1, d2):
+    pq = pq.copy()
     d1_old_new = np.vstack((pq[:, 1], d1))  # [0,:] <- old values     [1,:] <- new values
     d2_old_new = np.vstack((pq[:, 2], d2))
 
@@ -281,17 +308,47 @@ def update_pq(pq, d1, d2):
     pq[:, 2][d1_is_equal] = np.nanmin(d2_old_new, axis=0)[d1_is_equal]
 
     # if d1 are unequal, d1 and d2 are taken from the one where d1 is smaller.
-    is_minimum = np.zeros(d1_old_new.shape, dtype=bool)
-    minimum_value = np.nanmin(d1_old_new, axis=0)
-    is_minimum[d1_old_new == minimum_value] = True
-    is_minimum[:, d1_is_equal] = False
-    pq[:, 1][~d1_is_equal] = d1_old_new[is_minimum]
-    pq[:, 2][~d1_is_equal] = d2_old_new[is_minimum]
+    argminimum = np.nanargmin(d1_old_new, axis=0)
+
+    index_1 = argminimum[np.newaxis]
+    index_2 = np.arange(pq.shape[0])
+    pq[:, 1][~d1_is_equal] = d1_old_new[index_1, index_2][0][~d1_is_equal]
+    pq[:, 2][~d1_is_equal] = d2_old_new[index_1, index_2][0][~d1_is_equal]
+
+    # # Old version which is wrong... but yields better results...
+    # is_minimum = np.zeros(d1_old_new.shape, dtype=bool)  # initialising array
+    # minimum_value = np.nanmin(d1_old_new, axis=0)
+    # is_minimum[d1_old_new == minimum_value] = True
+    # is_minimum[:, d1_is_equal] = False
+    #
+    # pq[:, 1][~d1_is_equal] = d1_old_new[is_minimum]
+    # pq[:, 2][~d1_is_equal] = d2_old_new[is_minimum]
 
     return pq
 
 
-def get_pq(data, preference_vector, epsilon, mu):
+# Test : pq update
+# ------------------------------
+pq = np.ones((6, 3))
+pq[:, 0] = np.arange(0, pq.shape[0])
+d1 = np.array([0, 1, 2,   1,  1, np.NaN])
+d2 = np.array([0, 0, 0, 1.1, 0.9, np.NaN])
+
+pq_new = update_pq(pq=pq, d1=d1, d2=d2)
+
+pq_result = np.array([[0., 0., 0.],
+                      [1., 1., 0.],
+                      [2., 1., 1.],
+                      [3., 1., 1.],
+                      [4., 1., 0.9],
+                      [5., 1., 1.],
+                      ])
+
+assert((pq_new == pq_result).all())
+# ------------------------------
+
+
+def get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False):
 
     # Initialise pq
     # -----------------------------
@@ -300,9 +357,14 @@ def get_pq(data, preference_vector, epsilon, mu):
     pq = np.full((data.shape[0], 3), fill_value=np.NaN)
     pq[:, 0] = np.arange(0, data.shape[0])
 
+    if PLOT_TEST:
+        fig, ax = plt.subplots()
+        ax.plot(data[0], data[1], 'k.')
+
     # Calculate Distances
     # -----------------------------
     for index in range(data.shape[0]):
+
         # Calculate d1 and d2 (Subspace Distance)
         p_index = int(pq[index, 0])  # index of point (pq is ordered by RDist)
         d1, d2 = get_subspace_distance(data, p_index, preference_vector, epsilon=epsilon)
@@ -316,11 +378,51 @@ def get_pq(data, preference_vector, epsilon, mu):
         pq = pq_sorted[np.array(pq[:, 0], dtype="int64")]
 
         # Reorder pq according to values
-        pq_sort = pq[index + 1:]  # only sort not yet visited points !!
+        shift_index = 1
+        pq_sort = pq[index + shift_index:]  # only sort not yet visited points !!
         pq_argsort = np.lexsort((pq_sort[:, 2], pq_sort[:, 1]))  # Sort according to d1, then d2
-        pq[index + 1:] = pq_sort[pq_argsort]  # Apply reordering
+        pq[index + shift_index:] = pq_sort[pq_argsort]  # Apply reordering
+
+        if PLOT_TEST:
+            d1 = pq[index:, 1]
+            d2 = pq[index:, 2]
+            plot_sdist(data[p_index], data[index:], sdist_p=(d1, d2), fig=fig, ax=ax)
+            plt.pause(0.1)
 
     return pq
+
+
+# Test : pq sort
+# ------------------------------
+pq = np.array([[0., 0., 0.],
+               [1., 1., 0.],
+               [2., 1., 1.],
+               [3., 0., 1.],
+               [4., 1., 0.9],
+                ])
+pq_result = np.array([ [0., 0., 0.],
+                       [3., 0., 1.],
+                       [1., 1., 0.],
+                       [4., 1., 0.9],
+                       [2., 1., 1.],
+                       ])
+shift_index = 0
+index = 0
+pq_sort = pq[index + shift_index:]  # only sort not yet visited points !!
+pq_argsort = np.lexsort((pq_sort[:, 2], pq_sort[:, 1]))  # Sort according to d1, then d2
+pq[index + shift_index:] = pq_sort[pq_argsort]  # Apply reordering
+assert((pq == pq_result).all())
+# ------------------------------
+
+# PLOT Test PQ
+# ------------------------------
+preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
+get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False)
+
+preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
+pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
+
+# ------------------------------
 
 
 def dish(data, epsilon, mu):
@@ -333,7 +435,6 @@ def dish(data, epsilon, mu):
     # Calculate ReachDistances
     # ------------------
     pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
-
 
     # Extract Cluster
     # ------------------
@@ -367,7 +468,7 @@ def dish(data, epsilon, mu):
                 break
 
         if corresponding_cluster is None:
-            print("Cluster "+str(len(cluster_list)+1)+" found")
+            print("Cluster "+str(len(cluster_list)+1)+" found.")
             cluster_data = np.array(point_o)[np.newaxis]
             cluster_w_c = w_o
             cluster_list += [{"data": cluster_data,
