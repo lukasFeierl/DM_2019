@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 sep = " "
 fpath = r"../datasets/mouse.csv"
 mu = 40                     # 40
-epsilon = 0.1              # with 0.12 you just look for 0.12 wide circles in the data :(
+epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
 
 # -------------------------------------------------------------------
 
