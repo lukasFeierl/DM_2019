@@ -315,15 +315,6 @@ def update_pq(pq, d1, d2):
     pq[:, 1][~d1_is_equal] = d1_old_new[index_1, index_2][0][~d1_is_equal]
     pq[:, 2][~d1_is_equal] = d2_old_new[index_1, index_2][0][~d1_is_equal]
 
-    # # Old version which is wrong... but yields better results...
-    # is_minimum = np.zeros(d1_old_new.shape, dtype=bool)  # initialising array
-    # minimum_value = np.nanmin(d1_old_new, axis=0)
-    # is_minimum[d1_old_new == minimum_value] = True
-    # is_minimum[:, d1_is_equal] = False
-    #
-    # pq[:, 1][~d1_is_equal] = d1_old_new[is_minimum]
-    # pq[:, 2][~d1_is_equal] = d2_old_new[is_minimum]
-
     return pq
 
 
