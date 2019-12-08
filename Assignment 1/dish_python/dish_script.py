@@ -18,6 +18,12 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------------------------
 
 
+sep = ","
+fpath = r"../datasets/testset_b.txt"
+mu = 5           # 50
+epsilon = 0.5      # 0.05
+
+
 # sep = ";"
 # fpath = r"../datasets/lines_and_noise.csv"
 # # best looking result: mu=90; eps=0.1
@@ -416,23 +422,10 @@ pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
 # ------------------------------
 
 
-def dish(data, epsilon, mu):
-    """ Starts the DiSH Algorithm"""
-
-    # Calculate Preference Vectors
-    # ------------------
-    preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)  # w(p) as array for each row (i.e. point) of the data
-
-    # Calculate ReachDistances
-    # ------------------
-    pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
-
-    # Extract Cluster
-    # ------------------
-    cluster_order = pq  # cols: [point_index, d1, d2]
+def extract_cluster(cluster_order):
     cluster_list = []  # list with individual clusters (containing numpy arrays with all points of the cluster)
-
-    predecessor = cluster_order[0]  # first point / previous point
+    cluster_found = False
+    predecessor = cluster_order[0]  # predecessor of current point
 
     for object in cluster_order:
         o_index = int(object[0])  # object is a point with [index, d1 and d2]
@@ -446,25 +439,41 @@ def dish(data, epsilon, mu):
 
         # Get corresponding cluster
         # ---------------------------
-        corresponding_cluster = None
         for cluster in cluster_list:
             c_center = cluster["data"].mean(axis=0)
 
             has_same_preference_vector = (cluster["w_c"] == w_op).all()
-            is_near_enough = DIST_projected(point_o, c_center, preference_matrix=w_op) <= 2*epsilon
+            is_near_enough = DIST_projected(point_o, c_center, preference_matrix=w_op) <= 2 * epsilon
 
             if has_same_preference_vector and is_near_enough:
-                corresponding_cluster = cluster
+                cluster_found = True
                 cluster["data"] = np.vstack((cluster["data"], point_o))
                 break
 
-        if corresponding_cluster is None:
-            print("Cluster "+str(len(cluster_list)+1)+" found.")
-            cluster_data = np.array(point_o)[np.newaxis]
-            cluster_w_c = w_o
-            cluster_list += [{"data": cluster_data,
-                              "w_c": cluster_w_c}]
+        if not cluster_found:
+            print("Cluster " + str(len(cluster_list) + 1) + " found.")
+            cluster_list += [{"data": np.array(point_o)[np.newaxis],
+                              "w_c": w_o}]
+
+        # Set for next iteration
+        cluster_found = False
         predecessor = object
+    return cluster_list
+
+
+
+
+def dish(data, epsilon, mu):
+    """ Starts the DiSH Algorithm"""
+
+    # Calculate Preference Vectors
+    preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)  # w(p) as array for each row (i.e. point) of the data
+
+    # Calculate ReachDistances
+    pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
+
+    # Extract Cluster
+    cluster_list = extract_cluster(cluster_order=pq)
 
     return cluster_list
 
@@ -525,4 +534,26 @@ def plot_cluster(cluster_list, mu):
 
 # plot_reference_vectors(data, preference_vector)
 # plot_reachablity_plot(pq)
-plot_cluster(cluster_list, mu=mu)
+fig, ax = plot_cluster(cluster_list, mu=mu)
+
+
+
+# Plot cluster order:
+# ----------------------------
+for i, index in enumerate(pq[:, 0]):
+    index = int(index)
+    ax.text(x=data[index][0], y=data[index][1] + 0.08, s=str(i))
+
+
+# Used for testplot
+fig, ax = plot_cluster(cluster_list, mu=mu)
+ax.legend().remove()
+p = int(pq[49, 0])
+q = int(pq[50, 0])
+z = int(pq[51, 0])
+
+preference_vector[p]
+l1, = ax.plot(data[p, 0], data[p, 1], 'X', label="p", color="red")
+l2, = ax.plot(data[q, 0], data[q, 1], 'X', label="q", color="#e26900")
+l3, = ax.plot(data[z, 0], data[z, 1], 'X', label="z", color="#6088ff")
+ax.legend([l1, l2, l3], ["p", "q", "z"])
