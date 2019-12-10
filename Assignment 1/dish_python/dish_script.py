@@ -28,8 +28,8 @@ sep = ";"
 fpath = r"../datasets/lines_and_noise.csv"
 # best looking result: mu=90; eps=0.1
 # best logical result: mu= 2; eps=0.005
-mu = 90
-epsilon = 0.1
+# mu = 90
+# epsilon = 0.1
 mu = 2              # 50
 epsilon = 0.005      # 0.05
 
@@ -43,13 +43,12 @@ epsilon = 0.005      # 0.05
 # sep = " "
 # fpath = r"../datasets/mouse.csv"
 # mu = 40                     # 40
-# epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
+# epsilon = 0.10              # with 0.12 you just look for 0.12 wide circles in the data :(
 
 # -------------------------------------------------------------------
 
 
 #
-
 
 # -------------------------------------------------------------------
 # MAIN
@@ -615,7 +614,7 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
 preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
 pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
 cluster_list = dish(data, epsilon=epsilon, mu=mu)
-cluster_list = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
+final_cluster = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
 
 
 
@@ -648,11 +647,13 @@ def plot_reachablity_plot(pq):
     return fig, ax
 
 
-def plot_cluster(cluster_list, mu):
+def plot_cluster(data, cluster_list, mu):
+
     fig, ax = plt.subplots()
     fig.suptitle("DiSH Clustering Results")
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors = prop_cycle.by_key()['color']
+    ax.plot(data[:, 0], data[:, 1], 'ko')
 
     for i, cluster in enumerate(cluster_list):
         cluster_data = cluster["data"]
@@ -670,7 +671,9 @@ def plot_cluster(cluster_list, mu):
 
 # plot_reference_vectors(data, preference_vector)
 # plot_reachablity_plot(pq)
-fig, ax = plot_cluster(cluster_list, mu=mu)
+fig, ax = plot_cluster(data, cluster_list, mu=mu)
+fig, ax = plot_cluster(data, cluster_list, mu=1)
+
 
 
 
