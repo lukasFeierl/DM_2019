@@ -18,24 +18,26 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------------------------
 
 
-# sep = ","
-# fpath = r"../datasets/testset_b.txt"
-# mu = 5           # 50
-# epsilon = 0.5      # 0.05
+sep = ","
+fpath = r"../datasets/testset_b.txt"
+mu = 5           # 50
+epsilon = 0.5      # 0.05
 
 
-# sep = ";"
-# fpath = r"../datasets/lines_and_noise.csv"
-# # best looking result: mu=90; eps=0.1
-# # best logical result: mu= 2; eps=0.005
-# mu = 2              # 50
-# epsilon = 0.005      # 0.05
-
-
-sep = " "
-fpath = r"../datasets/simple_lines.csv"
-mu = 3
+sep = ";"
+fpath = r"../datasets/lines_and_noise.csv"
+# best looking result: mu=90; eps=0.1
+# best logical result: mu= 2; eps=0.005
+mu = 90
 epsilon = 0.1
+mu = 2              # 50
+epsilon = 0.005      # 0.05
+
+
+# sep = " "
+# fpath = r"../datasets/simple_lines.csv"
+# mu = 3
+# epsilon = 0.1
 
 
 # sep = " "
@@ -134,12 +136,12 @@ def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
         # Propose a new subspace
         best_feature = neighbor_count.argmax()                  # get feature with highest neighbor count
         neighbor_count[best_feature] = -1                       # set current features to "visited/already tried"
-        proposed_combination = best_subspace + [best_feature]   # add feature and subspace to form new proposed-subspace
+        proposed_featurespace = best_subspace + [best_feature]  # add feature and subspace to form new proposed-subspace
 
         # Check if criterion holds true for proposed subspace
-        neighbors = get_neighbors(point, data=data, features=proposed_combination, epsilon=epsilon)
+        neighbors = get_neighbors(point, data=data, features=proposed_featurespace, epsilon=epsilon)
         if len(neighbors) >= mu:
-            best_subspace = proposed_combination
+            best_subspace = proposed_featurespace
 
     # -----------------------------
     if TEST_PLOT:
@@ -475,10 +477,6 @@ def dish(data, epsilon, mu):
     return cluster_list
 
 
-import networkx as nx
-import random
-
-
 def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
 
     final_clusters = cluster_list.copy()
@@ -489,7 +487,7 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
         "w_c": np.array([False, False]),
         "data": np.array([], dtype=np.float).reshape(0, dimensionality),
         "nr": 0,
-        "label": "noise"
+        "label": "root"
     }
 
     ##################################################
@@ -546,20 +544,24 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
     ##################################################
     # for all clusters, starting with highest dimensionality
     for i, cluster in enumerate(reversed(final_clusters)):
+        print("main", cluster["label"], cluster["lambda"])
         max_lambda = dimensionality
 
         # for all cluster with higher dimensionality then that
-        for higher_cluster in final_clusters[:-(i+1)]:
+        for higher_cluster in final_clusters[-(i-1):]:
+            # print(" - sub", higher_cluster["label"], higher_cluster["lambda"] > cluster["lambda"])
+            if higher_cluster["lambda"] > cluster["lambda"]:
+                # print(" - sub", higher_cluster["label"])
 
-            w_cc = cluster["w_c"] * higher_cluster["w_c"]
-            dist = DIST_projected(cluster["center"], higher_cluster["center"], preference_matrix=w_cc)
+                w_cc = cluster["w_c"] * higher_cluster["w_c"]
+                dist = DIST_projected(cluster["center"], higher_cluster["center"], preference_matrix=w_cc)
 
-            # only assign parent if near enough
-            # only assign parent if there is no cluster lower in hirachy that is the parent
-            if (higher_cluster["lambda"] <= max_lambda) and (dist < 2*epsilon) and (higher_cluster["lambda"] > cluster["lambda"]):
-                print("parent found: "+str(higher_cluster["label"]))
-                cluster["child_of"] += [higher_cluster["label"]]
-                max_lambda = higher_cluster["lambda"]
+                # only assign parent if near enough
+                # only assign parent if there is no cluster lower in hirachy that is the parent
+                if (higher_cluster["lambda"] <= max_lambda) and (dist < 2*epsilon):
+                    print("parent found: "+str(higher_cluster["label"]))
+                    cluster["child_of"] += [higher_cluster["label"]]
+                    max_lambda = higher_cluster["lambda"]
 
         if len(cluster["child_of"]) == 0:
             print("parent found: noise")
@@ -571,23 +573,41 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
     # Plotting
     ##################################################
     if PLOT_RESULTS:
-        i = 0
-        import networkx as nx
 
+        import networkx as nx
         G = nx.DiGraph()
         for cluster in final_clusters:
             for child in cluster["child_of"]:
                 G.add_edge(cluster["label"], child)
 
+        fig, ax = plt.subplots(2)
+        pos = nx.kamada_kawai_layout(G)
+        nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[0])
+        plt.show()
+
+
         # Experiment: position of nodes
         # ----------------------------------------------------------
-            # G._node[cluster["label"]]["pos"] = (0, 1)
-        # pos = nx.get_node_attributes(G, 'pos')
-        # nx.draw_networkx(G, with_labels=True, arrowstyle='->')
-        # ----------------------------------------------------------
+        pos = nx.spectral_layout(G)
 
-        nx.draw_networkx(G, with_labels=True, arrowstyle='->')
+        for node in pos:
+            # for cl in final_clusters:
+            #     print(cl["label"].replace(",", ""), node)
+            #     if cl["label"].replace(",", "") == node:
+            #         print(node)
+            #         cluster = cl
+            cluster = [cl for cl in final_clusters if cl["label"].replace(",", "") == node.replace(",", "")]
+
+            if cluster == []:
+                pos[node] = np.array([0, 1.5])
+            else:
+                try:
+                    pos[node][1] = cluster[0]["lambda"]
+                except:
+                    pos[node] = np.hstack((pos[node], cluster[0]["lambda"]))
+        nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[1])
         plt.show()
+        # ----------------------------------------------------------
 
     return final_clusters
 
