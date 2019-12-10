@@ -15,7 +15,7 @@ data = dataframe.values
 # ------------------
 import sys
 sys.path.append("..")
-from dish import dish, build_hirarchy
+from dish_main import dish, build_hirarchy, plot_cluster
 
 mu = 25
 epsilon = 0.13

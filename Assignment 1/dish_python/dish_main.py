@@ -497,37 +497,44 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
     # Plotting
     ##################################################
     if PLOT_RESULTS:
+        try:
+            import networkx as nx
+            G = nx.DiGraph()
+            for cluster in final_clusters:
+                for child in cluster["child_of"]:
+                    G.add_edge(cluster["label"], child)
 
-        import networkx as nx
-        G = nx.DiGraph()
-        for cluster in final_clusters:
-            for child in cluster["child_of"]:
-                G.add_edge(cluster["label"], child)
+            fig, ax = plt.subplots()
+            pos = nx.kamada_kawai_layout(G)
+            nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax)
+            ax.set_title("Graph display of hierarchy")
+            plt.show()
 
-        fig, ax = plt.subplots(2)
-        pos = nx.kamada_kawai_layout(G)
-        nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[0])
-        ax[0].set_title("Graph display of hierarchy - Alternative 1")
-        plt.show()
+            # fig, ax = plt.subplots(2)
+            # pos = nx.kamada_kawai_layout(G)
+            # nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[0])
+            # ax[0].set_title("Graph display of hierarchy - Alternative 1")
+            # plt.show()
 
-
-        # Experiment: position of nodes
-        # ----------------------------------------------------------
-        pos = nx.spectral_layout(G)
-
-        for node in pos:
-            cluster = [cl for cl in final_clusters if cl["label"].replace(",", "") == node.replace(",", "")]
-
-            if cluster == []:
-                pos[node] = np.array([0, 1.5])
-            else:
-                try:
-                    pos[node][1] = cluster[0]["lambda"]
-                except:
-                    pos[node] = np.hstack((pos[node], cluster[0]["lambda"]))
-        nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[1])
-        ax[1].set_title("Graph display of hierarchy - Alternative2 \n(overlapping might occur)")
-        plt.show()
+            # # Experiment: position of nodes
+            # # ----------------------------------------------------------
+            # pos = nx.spectral_layout(G)
+            #
+            # for node in pos:
+            #     cluster = [cl for cl in final_clusters if cl["label"].replace(",", "") == node.replace(",", "")]
+            #
+            #     if cluster == []:
+            #         pos[node] = np.array([0, 1.5])
+            #     else:
+            #         try:
+            #             pos[node][1] = cluster[0]["lambda"]
+            #         except:
+            #             pos[node] = np.hstack((pos[node], cluster[0]["lambda"]))
+            # nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[1])
+            # ax[1].set_title("Graph display of hierarchy - Alternative2 \n(overlapping might occur)")
+            # plt.show()
+        except:
+            print("Some error occured at the creation of the clusters. Please ensure that networkx is installed")
         # ----------------------------------------------------------
 
     return final_clusters
