@@ -18,10 +18,10 @@ import matplotlib.pyplot as plt
 # -------------------------------------------------------------------
 
 
-sep = ","
-fpath = r"../datasets/testset_b.txt"
-mu = 5           # 50
-epsilon = 0.5      # 0.05
+# sep = ","
+# fpath = r"../datasets/testset_b.txt"
+# mu = 5           # 50
+# epsilon = 0.5      # 0.05
 
 
 # sep = ";"
@@ -32,16 +32,16 @@ epsilon = 0.5      # 0.05
 # epsilon = 0.005      # 0.05
 
 
-# sep = " "
-# fpath = r"../datasets/simple_lines.csv"
-# mu = 3
-# epsilon = 0.1
-
-
 sep = " "
-fpath = r"../datasets/mouse.csv"
-mu = 40                     # 40
-epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
+fpath = r"../datasets/simple_lines.csv"
+mu = 3
+epsilon = 0.1
+
+
+# sep = " "
+# fpath = r"../datasets/mouse.csv"
+# mu = 40                     # 40
+# epsilon = 0.12              # with 0.12 you just look for 0.12 wide circles in the data :(
 
 # -------------------------------------------------------------------
 
@@ -461,11 +461,8 @@ def extract_cluster(cluster_order):
     return cluster_list
 
 
-
-
 def dish(data, epsilon, mu):
     """ Starts the DiSH Algorithm"""
-
     # Calculate Preference Vectors
     preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)  # w(p) as array for each row (i.e. point) of the data
 
@@ -478,9 +475,128 @@ def dish(data, epsilon, mu):
     return cluster_list
 
 
+import networkx as nx
+import random
+
+
+def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
+
+    final_clusters = cluster_list.copy()
+    dimensionality = cluster_list[0]["w_c"].shape[0]
+
+    noise = {
+        "lambda": 0,
+        "w_c": np.array([False, False]),
+        "data": np.array([], dtype=np.float).reshape(0, dimensionality),
+        "nr": 0,
+        "label": "noise"
+    }
+
+    ##################################################
+    # PREPARE FOR PARENT/CHILD SEARCH
+    ##################################################
+    for i, cluster in enumerate(final_clusters):
+
+        # Assign stats to clusters (lambda, center, nr)
+        # ---------------------------------
+        cluster["lambda"] = dimensionality - cluster["w_c"].sum()
+        cluster["center"] = cluster["data"].mean(axis=0)
+        cluster["nr"] = len(cluster["data"])
+        cluster["child_of"] = []
+
+        # Combine small clusters to noise
+        # ---------------------------------
+        if cluster["nr"] < mu:
+            print("noise found")
+            noise["data"] = np.vstack( (noise["data"], cluster["data"]) )
+            noise["center"] = noise["data"].mean(axis=0)
+            noise["nr"] += cluster["nr"]
+
+    # remove noise clusters
+    final_clusters[:] = [val for val in final_clusters if val["nr"] > mu]
+
+    # Sort according to lambda
+    final_clusters[:] = sorted(final_clusters, key=lambda k: k['lambda'])
+
+    # label the cluster according to w(c)
+    # ---------------------------------
+    for cluster in final_clusters:
+        proposed_label = str(cluster["w_c"].astype(int).tolist())
+        cluster["label"] = proposed_label
+
+    # get rid of duplicated labels
+    for k, cluster in enumerate(final_clusters):
+        i = 1
+        LABLE_CLASH = False
+
+        for cluster_j in final_clusters[k+1:]:
+            if cluster["label"] == cluster_j["label"]:
+                print("label clash")
+                LABLE_CLASH = True
+                cluster_j["label"] += "_" + str(i)
+                i += 1
+
+        if LABLE_CLASH:
+            cluster["label"] += "_" + str(i)
+
+    #
+
+    ##################################################
+    # Find parents and childs
+    ##################################################
+    # for all clusters, starting with highest dimensionality
+    for i, cluster in enumerate(reversed(final_clusters)):
+        max_lambda = dimensionality
+
+        # for all cluster with higher dimensionality then that
+        for higher_cluster in final_clusters[:-(i+1)]:
+
+            w_cc = cluster["w_c"] * higher_cluster["w_c"]
+            dist = DIST_projected(cluster["center"], higher_cluster["center"], preference_matrix=w_cc)
+
+            # only assign parent if near enough
+            # only assign parent if there is no cluster lower in hirachy that is the parent
+            if (higher_cluster["lambda"] <= max_lambda) and (dist < 2*epsilon) and (higher_cluster["lambda"] > cluster["lambda"]):
+                print("parent found: "+str(higher_cluster["label"]))
+                cluster["child_of"] += [higher_cluster["label"]]
+                max_lambda = higher_cluster["lambda"]
+
+        if len(cluster["child_of"]) == 0:
+            print("parent found: noise")
+            cluster["child_of"] += [noise["label"]]
+
+    #
+
+    ##################################################
+    # Plotting
+    ##################################################
+    if PLOT_RESULTS:
+        i = 0
+        import networkx as nx
+
+        G = nx.DiGraph()
+        for cluster in final_clusters:
+            for child in cluster["child_of"]:
+                G.add_edge(cluster["label"], child)
+
+        # Experiment: position of nodes
+        # ----------------------------------------------------------
+            # G._node[cluster["label"]]["pos"] = (0, 1)
+        # pos = nx.get_node_attributes(G, 'pos')
+        # nx.draw_networkx(G, with_labels=True, arrowstyle='->')
+        # ----------------------------------------------------------
+
+        nx.draw_networkx(G, with_labels=True, arrowstyle='->')
+        plt.show()
+
+    return final_clusters
+
+
 preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
 pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
 cluster_list = dish(data, epsilon=epsilon, mu=mu)
+cluster_list = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
+
 
 
 #
@@ -538,22 +654,23 @@ fig, ax = plot_cluster(cluster_list, mu=mu)
 
 
 
-# Plot cluster order:
-# ----------------------------
-for i, index in enumerate(pq[:, 0]):
-    index = int(index)
-    ax.text(x=data[index][0], y=data[index][1] + 0.08, s=str(i))
 
-
-# Used for testplot
-fig, ax = plot_cluster(cluster_list, mu=mu)
-ax.legend().remove()
-p = int(pq[49, 0])
-q = int(pq[50, 0])
-z = int(pq[51, 0])
-
-preference_vector[p]
-l1, = ax.plot(data[p, 0], data[p, 1], 'X', label="p", color="red")
-l2, = ax.plot(data[q, 0], data[q, 1], 'X', label="q", color="#e26900")
-l3, = ax.plot(data[z, 0], data[z, 1], 'X', label="z", color="#6088ff")
-ax.legend([l1, l2, l3], ["p", "q", "z"])
+# # Plot cluster order:
+# # ----------------------------
+# for i, index in enumerate(pq[:, 0]):
+#     index = int(index)
+#     ax.text(x=data[index][0], y=data[index][1] + 0.08, s=str(i))
+#
+#
+# # Used for testplot
+# fig, ax = plot_cluster(cluster_list, mu=mu)
+# ax.legend().remove()
+# p = int(pq[49, 0])
+# q = int(pq[50, 0])
+# z = int(pq[51, 0])
+#
+# preference_vector[p]
+# l1, = ax.plot(data[p, 0], data[p, 1], 'X', label="p", color="red")
+# l2, = ax.plot(data[q, 0], data[q, 1], 'X', label="q", color="#e26900")
+# l3, = ax.plot(data[z, 0], data[z, 1], 'X', label="z", color="#6088ff")
+# ax.legend([l1, l2, l3], ["p", "q", "z"])
