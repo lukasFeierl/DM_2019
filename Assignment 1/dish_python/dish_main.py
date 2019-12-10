@@ -4,20 +4,53 @@ import matplotlib.pyplot as plt
 
 
 def DIST(point, data):
-    """ calculates the euclidean distance between point and all points in data"""
+    """ Calculates the euclidean distance between point and all points in data.
+
+    Parameters:
+    -----------
+    point : Vector of a single point.
+    data : Matrix of all data points.
+
+    Returns:
+    --------
+    Matrix containing distances from all points to the input point."""
     return np.sqrt(np.sum((point - data) ** 2, axis=1))
 
 
 def get_neighbors(point, data, features, epsilon):
-    """ returns all neighbors of a point, if projected along features in a radius epsilon"""
+    """ Returns all neighbors of a point, if projected along features in a radius epsilon.
+
+    Parameters:
+    -----------
+    point : Vector of a single point.
+    data : Matrix of all data points.
+    features : List of features along which the points are projected.
+    epsilon : Distance within which points are considered close to each other.
+
+    Returns:
+    --------
+    Matrix of data points within the epsilon range of the point.
+    """
     is_near = DIST(data[:, features], point[features]) <= epsilon         # point[features] = projection to one feature
     return data[is_near]
 
 
 def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
-    """ calculates the best subspace for a given point. An attribute/feature contributes to the best subspace if enough
-    elements are in the neighborhood of the point in a radius epsilon. """
+    """ calculates the best subspace for a given point. An attribute/feature contributes to the best subspace
+	if enough elements are in the neighborhood
+    of the point in a radius epsilon.
 
+    Parameters:
+    -----------
+    point : Vector of a single point.
+    data : Matrix of all data points.
+    mu : Minimum numbers of points within the epsilon range.
+    epsilon : Distance within which points are considered close to each other.
+
+    Returns:
+    --------
+    List of best subspaces for the given point.
+    """
     #-----------------------------
     if TEST_PLOT:
         fig, ax = plt.subplots()
@@ -69,9 +102,20 @@ def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
 
 
 def get_preference_vectors(data, mu, epsilon):
-    """ calculates the preference vector w(p) of each point, assigning "True" to each feature which is in the "best
-    subspace" - thus relevant for clustering - and "False" otherwise.
-    The number of False-values in the preference vector is the called the subspace dimensionality Lambda.
+    """ Calculates the preference vector w(p) of each point, assigning "True" to each feature which is in the "best subspace"
+	- thus relevant for clustering - and "False" otherwise. The number of False-values in the preference vector is the
+	called the subspace dimensionality Lambda.
+
+    Parameters:
+    -----------
+    data : Matrix of all data points.
+    mu : Minimum numbers of points within the epsilon range.
+    epsilon : Distance within which points are considered close to each other.
+
+    Returns:
+    --------
+    Vector with Boolean entries for each feature (True if feature is among the list of best subspaces and False otherwise).
+
     """
     # initialising - stores w(p) for each point
     preference_vector = np.zeros(data.shape, dtype=bool)
@@ -85,8 +129,18 @@ def get_preference_vectors(data, mu, epsilon):
 
 
 def DIST_projected(point, data, preference_matrix):
-    """ calculates the euclidean distance, but uses the preference_vectors to project the data to lower dimension.
-    Returns distances as a vector for each distance p-q for each point q in the data"""
+    """ Calculates the Euclidean distance, but uses the preference_matrix to project the data to lower dimensions.
+   
+    Parameters:  
+    -----------
+    point : Vector of a single point.
+    data : Matrix of all data points.
+    preference_matrix : Matrix containing preference vectors for each point.
+
+    Returns: 
+    --------
+    Matrix containing distances p-q for each point q in the data.
+    """
     dist_matrix = (point - data) ** 2
 
     # Project to feature dimensions specified in preference Matrix
@@ -101,10 +155,21 @@ def DIST_projected(point, data, preference_matrix):
 
 
 def get_subspace_distance(data, p_index, preference_vector, epsilon):
-    """ calculates the subspace distance between the point and all the other points in the data.
+    """ Calculates the subspace distance between the point and all the other points in the data.
     The subspace distance consists of two values d1 and d2. d1 represents the dimensionality in respect to another
     point. Two points have the same d1 if they are k.dim clusters belonging to the same cluster, or k-1 dim. clusters
-    belonging to separate clusters (i.e not the same preference vector or to far away from each other).
+    belonging to separate clusters (i.e not the same preference vector or too far away from each other).
+
+    Parameters:
+    -----------
+    data : Matrix of all data points.
+    p_index : Index of the given point.
+    preference_vector : Matrix containing preference vectors for each point.
+    epsilon : Distance within which points are considered close to each other.
+
+    Returns:
+    --------
+    Two values d1 and d2 for the given point.
     """
     # Calculate dimensionality Lambda (Part one of d1)
     w_p = preference_vector[p_index]
@@ -132,10 +197,20 @@ def get_subspace_distance(data, p_index, preference_vector, epsilon):
 
 
 def get_reachability_distance(d1, d2, mu):
-    """ to avoid single link effect, the sdist of the mu nearest neighbor of the point in respect to p is used
-    as minimum sdist. If the point is in a cluster with less then mu neighbors this then results in beeing a
-    one-point cluster (hence, no cluster) """
+    """ To avoid single linkage effects, the SDIST of the mu-nearest-neighbor of the point with respect to p is used
+        as minimum SDIST. If the point is in a cluster with less then mu neighbors, this then results in a
+        one-point cluster (hence, no cluster).
 
+    Parameters:
+    -----------
+    d1 : d1-value of a given point.
+    d2 : d2-value of a given point.
+    mu : Minimum numbers of neighbors.
+
+    Returns:
+    --------
+    Reachability distances (two values)? for the given point.
+    """
     d = np.vstack((d1, d2)).T
     d_argsort = np.lexsort((d[:, 1], d[:, 0]))  # Sort according to d1, then d2
     d_sorted = d[d_argsort]
@@ -147,6 +222,20 @@ def get_reachability_distance(d1, d2, mu):
 
 
 def update_pq(pq, d1, d2):
+    """ To avoid single linkage effects, the SDIST of the mu-nearest-neighbor of the point with respect to p is used
+    as minimum SDIST. If the point is in a cluster with less then mu neighbors, this then results in a
+    one-point cluster (hence, no cluster).
+
+    Parameters:
+    -----------
+    pq : Priority queue.
+    d1 : d1-value of a given point.
+    d2 : d2-value of a given point.
+
+    Returns:
+    --------
+    Reordered priority queue pq according to the reachability distances.
+    """
     pq = pq.copy()
     d1_old_new = np.vstack((pq[:, 1], d1))  # [0,:] <- old values     [1,:] <- new values
     d2_old_new = np.vstack((pq[:, 2], d2))
@@ -167,7 +256,19 @@ def update_pq(pq, d1, d2):
 
 
 def get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False):
+    """ Determines the priority queue which is the final cluster order from which the clusters can be extracted.
 
+        Parameters:
+        -----------
+        data : Matrix of all data points.
+        preference_vector : Matrix containing preference vectors for each point.
+        epsilon : Distance within which points are considered close to each other.
+        mu : Minimum numbers of points within the epsilon range.
+
+        Returns:
+        --------
+        Priority queue containing entries consisting of [index, d1, d2] which is the final cluster order.
+    """
     # Initialise pq
     # -----------------------------
     # First column are indices from the points, second column are the d1-values, last column are the d2-values
@@ -211,6 +312,16 @@ def get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False):
 
 
 def extract_cluster(cluster_order, data, preference_vector, epsilon):
+    """ Walks through the previously obtained cluster order (=priority queue) to extract the clusters.
+
+    Parameters:
+    -----------
+    cluster_order : Priority queue containing entries consisting of [index, d1, d2].
+
+    Returns:
+    --------
+    A dictionary containing the clusters and their points.
+    """
     cluster_list = []  # list with individual clusters (containing numpy arrays with all points of the cluster)
     cluster_found = False
     predecessor = cluster_order[0]  # predecessor of current point
@@ -241,7 +352,9 @@ def extract_cluster(cluster_order, data, preference_vector, epsilon):
         if not cluster_found:
             print("Cluster " + str(len(cluster_list) + 1) + " found.")
             cluster_list += [{"data": np.array(point_o)[np.newaxis],
-                              "w_c": w_o}]
+                              "w_c": w_o,
+                              "num": len(cluster_list)+1,
+                              },]
 
         # Set for next iteration
         cluster_found = False
@@ -250,7 +363,18 @@ def extract_cluster(cluster_order, data, preference_vector, epsilon):
 
 
 def dish(data, epsilon, mu):
-    """ Starts the DiSH Algorithm"""
+    """ Starts the DiSH Algorithm
+
+    Parameters:
+    -----------
+    data : Matrix of all data points.
+    epsilon : Distance within which points are considered close to each other.
+    mu : Minimum numbers of points within the epsilon range.
+
+    Returns:
+    --------
+    A dictionary containing the clusters and their points.
+    """
     # Calculate Preference Vectors
     preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)  # w(p) as array for each row (i.e. point) of the data
 
@@ -264,7 +388,21 @@ def dish(data, epsilon, mu):
 
 
 def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
+    """ creates a hirarchy between the clusters using the dimensionality of the clusters combined with
+    their distances to each other. As a result, low-dimensional clusters are assigned to high dimensional
+    ones if their centers are near enough.
 
+    Parameters:
+    -----------
+    cluster_list : Dictionary containing the clusters and their points.
+    epsilon : Distance within which points are considered close to each other.
+    mu : Minimum numbers of points within the epsilon range.
+
+    Returns:
+    -----------
+    updated cluster_list where clusters with too less datapoins are discarded while valid clusters are assigned to at
+    least one parent (with "is_child_of" attribute).
+    """
     final_clusters = cluster_list.copy()
     dimensionality = cluster_list[0]["w_c"].shape[0]
 
@@ -479,4 +617,65 @@ if __name__ == '__main__':
     epsilon = 0.13
     cluster_list = dish(data, epsilon=epsilon, mu=mu)
     final_cluster = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
-    plot_cluster(data, cluster_list, mu=mu)
+    # plot_cluster(data, cluster_list, mu=mu)
+
+
+    # Evaluation
+    # ------------------
+
+    def evaluate_clusters(data, cluster_list, mu):
+        from sklearn import metrics
+        data_clust1 = data[:290]
+        data_clust2 = data[290:390]
+        data_clust3 = data[390:490]
+        data_noise = data[490:500]
+
+        fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+        ax[0].plot(data_clust1[:, 0], data_clust1[:, 1], '.', color='red')
+        ax[0].plot(data_clust2[:, 0], data_clust2[:, 1], '.', color='blue')
+        ax[0].plot(data_clust3[:, 0], data_clust3[:, 1], '.', color='green')
+        ax[0].plot(data_noise[:, 0], data_noise[:, 1], '.', color='black')
+        ax[0].set_title("True Labels")
+
+        ax[1].set_title("Clustering Results")
+        # prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = ['red', 'blue', 'green']  # prop_cycle.by_key()['color']
+        for i, cluster in enumerate(cluster_list):
+            cluster_data = cluster["data"]
+            cluster_center = cluster["data"].mean(axis=0)
+
+            if cluster_data.shape[0] < mu:
+                ax[1].plot(cluster_data[:, 0], cluster_data[:, 1], 'k.')
+
+            else:
+                ax[1].plot(cluster_data[:, 0], cluster_data[:, 1], '.', color=colors[i % 9],
+                           label="Cluster " + str(cluster["w_c"]))
+                ax[1].plot(cluster_center[0], cluster_center[1], 'x', markersize=20, color=colors[i % 9])
+        plt.savefig("cluster_results.png")
+
+        labels_true = [1 for i in range(0, 290)]\
+                      + [2 for i in range(290, 390)]\
+                      + [3 for i in range(390, 490)]\
+                      + [0 for i in range(490, 500)]
+
+        labels_pred = []
+        for point in data:
+            pointfound = False
+            for cluster in cluster_list:
+                for point2 in cluster["data"]:
+                    if np.isclose(point[0], point2[0]) and np.isclose(point[1], point2[1]):
+                        if cluster["data"].shape[0] < mu:
+                            labels_pred.append(0)  # noise label
+                        else:
+                            labels_pred.append(cluster["num"])  # cluster label
+
+                        pointfound = True
+            if pointfound == False:
+                print("point not found...")
+
+        scores = metrics.mutual_info_score(labels_true, labels_pred), metrics.adjusted_mutual_info_score(labels_true,
+                                                                                                         labels_pred)
+        print("scores:", scores)
+        return scores
+
+    evaluate_clusters(data=data, cluster_list=cluster_list, mu=mu)
