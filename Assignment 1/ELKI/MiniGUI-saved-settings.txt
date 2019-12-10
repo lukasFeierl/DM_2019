@@ -1,17 +1,4 @@
 #Saved ELKI settings. First line is title, remaining lines are parameters.
-orclus
--dbc.in
-C:\Users\feierll\PycharmProjects\UNI\DataMining\mouse.csv
--time
--algorithm
-clustering.correlation.ORCLUS
--projectedclustering.k
-3
--projectedclustering.l
-2
--hisc.alpha
-0.1
-
 
 de.lmu.ifi.dbs.elki.application.KDDCLIApplication
 -dbc.in
@@ -44,6 +31,25 @@ clustering.correlation.DISH
 3
 -projectedclustering.l
 2
+-hisc.alpha
+0.1
+
+[Saved Settings]
+de.lmu.ifi.dbs.elki.application.KDDCLIApplication
+-dbc.in
+C:\Users\feierll\PycharmProjects\UNI\DataMining\Group_Assignments\Assignment 1\datasets\mouse.csv
+-time
+-algorithm
+clustering.subspace.DiSH
+-dish.epsilon
+0.13
+-dish.mu
+25
+-projectedclustering.k
+3
+-projectedclustering.l
+2
+C:\Users\feierll\PycharmProjects\UNI\DataMining\mouse.csv
 -hisc.alpha
 0.1
 

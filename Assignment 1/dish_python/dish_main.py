@@ -3,100 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# -------------------------------------------------------------------
-# PARAMETERS
-# -------------------------------------------------------------------
-# Problems:
-# - (lines_and_nois.csv)    TODO: not able to connect lines... At least if they are not axis-parallel.
-# - Hard to find clusters that are not parallel to axes (lines_and_noise.csv)
-# - hard to detect varying densities
-# - how to set mu and epsilon (when not knowing the result) ?!!
-# - mu-nearest neighbor not working in our code?
-# - maybe the problem is noise??
-# - maybe more useful in more dimension, where overlaying does not occur so often ??
-#
-# -------------------------------------------------------------------
-
-
-sep = ","
-fpath = r"../datasets/testset_b.txt"
-mu = 5           # 50
-epsilon = 0.5      # 0.05
-
-
-sep = ";"
-fpath = r"../datasets/lines_and_noise.csv"
-# best looking result: mu=90; eps=0.1
-# best logical result: mu= 2; eps=0.005
-# mu = 90
-# epsilon = 0.1
-mu = 2              # 50
-epsilon = 0.005      # 0.05
-
-
-# sep = " "
-# fpath = r"../datasets/simple_lines.csv"
-# mu = 3
-# epsilon = 0.1
-
-
-# sep = " "
-# fpath = r"../datasets/mouse.csv"
-# mu = 40                     # 40
-# epsilon = 0.10              # with 0.12 you just look for 0.12 wide circles in the data :(
-
-# -------------------------------------------------------------------
-
-
-#
-
-# -------------------------------------------------------------------
-# MAIN
-# -------------------------------------------------------------------
-
-# import data
-dataframe = pd.read_csv(fpath, sep=sep, comment="#", header=None)
-dataframe = dataframe.dropna(axis=1,how='all')
-data = dataframe.values
-
-
 def DIST(point, data):
     """ calculates the euclidean distance between point and all points in data"""
     return np.sqrt(np.sum((point - data) ** 2, axis=1))
-
-
-# # Test-plot DIST
-# # ----------------
-# fig, ax = plt.subplots()
-# p = data[0]
-# q = data[1]
-# ax.plot(data[:, 0], data[:, 1], 'k.')
-# ax.plot(p[0], p[1], 'ro', label="p")
-# ax.plot(q[0], q[1], 'rx', label="q")
-# ax.plot([p[0], q[0]], [p[1], q[1]], label="DIST(p,q)"+str(DIST(p, q[np.newaxis])))
-# ax.plot([p[0], p[0]], [p[1], p[1]], label="DIST(p,p)"+str(DIST(p, p[np.newaxis])))
-# ax.legend()
-# # ----------------
 
 
 def get_neighbors(point, data, features, epsilon):
     """ returns all neighbors of a point, if projected along features in a radius epsilon"""
     is_near = DIST(data[:, features], point[features]) <= epsilon         # point[features] = projection to one feature
     return data[is_near]
-
-# # Test-plot Neighbors
-# # ----------------
-# p = data[0]
-# fig, ax = plt.subplots()
-# fig.suptitle("Neighbors of point p")
-# ax.plot(data[:, 0], data[:, 1], 'k.')
-# ax.plot(p[0], p[1], 'ro', label="Point p")
-# for features in [[0], [1], [0,1]]:
-#     neighbors = get_neighbors(p, data, features=features, epsilon=epsilon)
-#     ax.plot(neighbors[:, 0], neighbors[:, 1], '.', label="feature-dimension: "+str(features))
-#
-# plt.legend()
-# # ----------------
 
 
 def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
@@ -106,6 +21,7 @@ def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
     #-----------------------------
     if TEST_PLOT:
         fig, ax = plt.subplots()
+        fig.suptitle("DiSH - get_best_subspace()")
         ax.plot(data[:,0], data[:,1], "k.")
         ax.plot(point[0], point[1], "ro")
     #-----------------------------
@@ -121,7 +37,7 @@ def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
 
         # -----------------------------
         if TEST_PLOT:
-            ax.plot(neighbors[:,0], neighbors[:,1], ".", label="feature: "+ str(feature)+" (#"+str(len(neighbors))+")")
+            ax.plot(neighbors[:,0], neighbors[:,1], ".", label="feature: "+ str(feature)+" (nr="+str(len(neighbors))+")")
         #-----------------------------
 
     # get all candidate attributes
@@ -145,18 +61,11 @@ def get_best_subspace(point, data, mu, epsilon, TEST_PLOT=False):
     # -----------------------------
     if TEST_PLOT:
         neighbors = get_neighbors(point, data=data, features=best_subspace, epsilon=epsilon)
-        ax.plot(neighbors[:, 0], neighbors[:, 1], '.', label="best subspace: "+ str(best_subspace)+" (#"+str(len(neighbors))+")")
+        ax.plot(neighbors[:, 0], neighbors[:, 1], '.', label="best subspace: "+ str(best_subspace)+" (nr="+str(len(neighbors))+")")
         ax.legend()
     # -----------------------------
 
     return best_subspace
-
-
-# # Test-plot Subspace
-# # --------------------
-# point = data[0]
-# get_best_subspace(point, data, mu, epsilon, TEST_PLOT=True)
-# # --------------------
 
 
 def get_preference_vectors(data, mu, epsilon):
@@ -175,12 +84,6 @@ def get_preference_vectors(data, mu, epsilon):
     return preference_vector
 
 
-# Test-plot Preference Vectors
-# --------------------
-# done late with plot_preference_vectors()
-# --------------------
-
-
 def DIST_projected(point, data, preference_matrix):
     """ calculates the euclidean distance, but uses the preference_vectors to project the data to lower dimension.
     Returns distances as a vector for each distance p-q for each point q in the data"""
@@ -195,22 +98,6 @@ def DIST_projected(point, data, preference_matrix):
         dist_vector = np.sqrt(np.sum(projected_dist_matrix, axis=1))
 
     return dist_vector
-
-
-# # Test-plot DIST_projected
-# # ----------------
-# fig, ax = plt.subplots()
-# p = data[0]
-# q = data[1]
-#
-# ax.plot(data[:, 0], data[:, 1], 'k.')
-# ax.plot(p[0], p[1], 'ro', label="p")
-# ax.plot(q[0], q[1], 'rx', label="q")
-# ax.plot([p[0], q[0]], [p[1], p[1]], label="DIST_[0] (p,q)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[True, False])))
-# ax.plot([p[0], p[0]], [p[1], q[1]], label="DIST_[1] (p,p)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[False, True])))
-# ax.plot([p[0], q[0]], [p[1], q[1]], label="DIST_[0,1] (p,p)"+str(DIST_projected(p, q[np.newaxis], preference_matrix=[True, True])))
-# ax.legend()
-# # ----------------
 
 
 def get_subspace_distance(data, p_index, preference_vector, epsilon):
@@ -244,27 +131,6 @@ def get_subspace_distance(data, p_index, preference_vector, epsilon):
     return d1, d2
 
 
-# # Plot Test : Subspace Distance
-# # ------------------------------
-# p_index = 0
-#
-# point = data[p_index]
-# preference_vector = get_preference_vectors(data, mu, epsilon)
-# sdist_p = get_subspace_distance(data, p_index, preference_vector, epsilon)
-#
-# fig, ax = plt.subplots()
-# cmaps = ["Reds_r", "Blues_r", "Greens_r"]
-# for i in range(3):
-#     indices = np.argwhere(sdist_p[0] == i)
-#     print(i, len(indices))
-#     ax.scatter(x=data[indices, 0], y=data[indices, 1], c=sdist_p[1][indices], s=20, cmap=cmaps[i])
-#
-# ax.plot(point[0], point[1], 'ro', label="p")
-# fig.suptitle("COLOR - MAP\nd1=0 (red),   d1=1 (blue),   d1=2 (green)\n Darker colour means lower d2")
-# ax.plot()
-# # ------------------------------
-
-
 def get_reachability_distance(d1, d2, mu):
     """ to avoid single link effect, the sdist of the mu nearest neighbor of the point in respect to p is used
     as minimum sdist. If the point is in a cluster with less then mu neighbors this then results in beeing a
@@ -278,31 +144,6 @@ def get_reachability_distance(d1, d2, mu):
     d[d_argsort] = d_sorted
 
     return d[:, 0], d[:, 1]
-
-
-# Plot Test : Reachablity Distance
-# ------------------------------
-def plot_sdist(point, data, sdist_p, fig, ax):
-    cmaps = ["Reds_r", "Blues_r", "Greens_r"]
-    for i in range(3):
-        indices = np.argwhere(sdist_p[0] == i)
-        print(i, len(indices))
-        ax.scatter(x=data[indices, 0], y=data[indices, 1], c=sdist_p[1][indices], s=20, cmap=cmaps[i])
-
-    ax.plot(point[0], point[1], 'ro', label="p")
-    fig.suptitle("COLOR - MAP\nd1=0 (red),   d1=1 (blue),   d1=2 (green)\n Darker colour means lower d2")
-    ax.plot()
-
-# p_index = 0
-#
-# point = data[p_index]
-# preference_vector = get_preference_vectors(data, mu, epsilon)
-# d1, d2 = get_subspace_distance(data, p_index, preference_vector, epsilon)
-# sdist_p = get_reachability_distance(d1, d2, mu=mu)
-#
-# fig, ax = plt.subplots()
-# plot_sdist(point, data, sdist_p, fig, ax)
-# ------------------------------
 
 
 def update_pq(pq, d1, d2):
@@ -323,27 +164,6 @@ def update_pq(pq, d1, d2):
     pq[:, 2][~d1_is_equal] = d2_old_new[index_1, index_2][0][~d1_is_equal]
 
     return pq
-
-
-# Test : pq update
-# ------------------------------
-pq = np.ones((6, 3))
-pq[:, 0] = np.arange(0, pq.shape[0])
-d1 = np.array([0, 1, 2,   1,  1, np.NaN])
-d2 = np.array([0, 0, 0, 1.1, 0.9, np.NaN])
-
-pq_new = update_pq(pq=pq, d1=d1, d2=d2)
-
-pq_result = np.array([[0., 0., 0.],
-                      [1., 1., 0.],
-                      [2., 1., 1.],
-                      [3., 1., 1.],
-                      [4., 1., 0.9],
-                      [5., 1., 1.],
-                      ])
-
-assert((pq_new == pq_result).all())
-# ------------------------------
 
 
 def get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False):
@@ -390,40 +210,7 @@ def get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False):
     return pq
 
 
-# Test : pq sort
-# ------------------------------
-pq = np.array([[0., 0., 0.],
-               [1., 1., 0.],
-               [2., 1., 1.],
-               [3., 0., 1.],
-               [4., 1., 0.9],
-                ])
-pq_result = np.array([ [0., 0., 0.],
-                       [3., 0., 1.],
-                       [1., 1., 0.],
-                       [4., 1., 0.9],
-                       [2., 1., 1.],
-                       ])
-shift_index = 0
-index = 0
-pq_sort = pq[index + shift_index:]  # only sort not yet visited points !!
-pq_argsort = np.lexsort((pq_sort[:, 2], pq_sort[:, 1]))  # Sort according to d1, then d2
-pq[index + shift_index:] = pq_sort[pq_argsort]  # Apply reordering
-assert((pq == pq_result).all())
-# ------------------------------
-
-# PLOT Test PQ
-# ------------------------------
-preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
-get_pq(data, preference_vector, epsilon, mu, PLOT_TEST=False)
-
-preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
-pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
-
-# ------------------------------
-
-
-def extract_cluster(cluster_order):
+def extract_cluster(cluster_order, data, preference_vector, epsilon):
     cluster_list = []  # list with individual clusters (containing numpy arrays with all points of the cluster)
     cluster_found = False
     predecessor = cluster_order[0]  # predecessor of current point
@@ -471,7 +258,7 @@ def dish(data, epsilon, mu):
     pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
 
     # Extract Cluster
-    cluster_list = extract_cluster(cluster_order=pq)
+    cluster_list = extract_cluster(cluster_order=pq, data=data, preference_vector=preference_vector, epsilon=epsilon)
 
     return cluster_list
 
@@ -582,6 +369,7 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
         fig, ax = plt.subplots(2)
         pos = nx.kamada_kawai_layout(G)
         nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[0])
+        ax[0].set_title("Graph display of hierarchy - Alternative 1")
         plt.show()
 
 
@@ -590,11 +378,6 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
         pos = nx.spectral_layout(G)
 
         for node in pos:
-            # for cl in final_clusters:
-            #     print(cl["label"].replace(",", ""), node)
-            #     if cl["label"].replace(",", "") == node:
-            #         print(node)
-            #         cluster = cl
             cluster = [cl for cl in final_clusters if cl["label"].replace(",", "") == node.replace(",", "")]
 
             if cluster == []:
@@ -605,17 +388,11 @@ def build_hirarchy(cluster_list, epsilon, mu, PLOT_RESULTS=True):
                 except:
                     pos[node] = np.hstack((pos[node], cluster[0]["lambda"]))
         nx.draw(G, pos, alpha=1, with_labels=True, font_size=8, ax=ax[1])
+        ax[1].set_title("Graph display of hierarchy - Alternative2 \n(overlapping might occur)")
         plt.show()
         # ----------------------------------------------------------
 
     return final_clusters
-
-
-preference_vector = get_preference_vectors(data, mu=mu, epsilon=epsilon)
-pq = get_pq(data, preference_vector, epsilon=epsilon, mu=mu)
-cluster_list = dish(data, epsilon=epsilon, mu=mu)
-final_cluster = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
-
 
 
 #
@@ -626,7 +403,7 @@ final_cluster = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
 # ------------------------
 
 
-def plot_reference_vectors(data, preference_vector):
+def plot_preference_vectors(data, preference_vector):
     pref_ax0 = data[preference_vector[:, 0]]
     pref_ax1 = data[preference_vector[:, 1]]
 
@@ -669,31 +446,37 @@ def plot_cluster(data, cluster_list, mu):
     ax.legend(loc="upper right")
     return fig, ax
 
-# plot_reference_vectors(data, preference_vector)
-# plot_reachablity_plot(pq)
-fig, ax = plot_cluster(data, cluster_list, mu=mu)
-fig, ax = plot_cluster(data, cluster_list, mu=1)
 
+def plot_sdist(point, data, sdist_p, fig, ax):
+    cmaps = ["Reds_r", "Blues_r", "Greens_r"]
+    for i in range(3):
+        indices = np.argwhere(sdist_p[0] == i)
+        print(i, len(indices))
+        ax.scatter(x=data[indices, 0], y=data[indices, 1], c=sdist_p[1][indices], s=20, cmap=cmaps[i])
 
+    ax.plot(point[0], point[1], 'ro', label="p")
+    fig.suptitle("COLOR - MAP\nd1=0 (red),   d1=1 (blue),   d1=2 (green)\n Darker color means lower d2")
+    ax.plot()
+    return fig, ax
 
-
-
-# # Plot cluster order:
-# # ----------------------------
-# for i, index in enumerate(pq[:, 0]):
-#     index = int(index)
-#     ax.text(x=data[index][0], y=data[index][1] + 0.08, s=str(i))
 #
-#
-# # Used for testplot
-# fig, ax = plot_cluster(cluster_list, mu=mu)
-# ax.legend().remove()
-# p = int(pq[49, 0])
-# q = int(pq[50, 0])
-# z = int(pq[51, 0])
-#
-# preference_vector[p]
-# l1, = ax.plot(data[p, 0], data[p, 1], 'X', label="p", color="red")
-# l2, = ax.plot(data[q, 0], data[q, 1], 'X', label="q", color="#e26900")
-# l3, = ax.plot(data[z, 0], data[z, 1], 'X', label="z", color="#6088ff")
-# ax.legend([l1, l2, l3], ["p", "q", "z"])
+
+
+if __name__ == '__main__':
+
+    # import data
+    # ------------------
+    sep = " "
+    fpath = r"../datasets/mouse.csv"
+
+    dataframe = pd.read_csv(fpath, sep=sep, comment="#", header=None)
+    dataframe = dataframe.dropna(axis=1, how='all')
+    data = dataframe.values
+
+    # Run DiSH
+    # ------------------
+    mu = 25
+    epsilon = 0.13
+    cluster_list = dish(data, epsilon=epsilon, mu=mu)
+    final_cluster = build_hirarchy(cluster_list, mu=mu, epsilon=epsilon)
+    plot_cluster(data, cluster_list, mu=mu)
