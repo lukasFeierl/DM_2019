@@ -13,16 +13,18 @@ import mplleaflet
 
 
 def main():
+
     # PARAMETER
     # --------------------------------------------
-    data_directory = r"./cgt_stud_2019"  # local path
-    subdir_list = [r"10_78_2019-11-01T180450.475",
-                   r"10_82_2019-10-31T085843.034",
-                   r"10_83_2019-10-31T084235.379",
-                   ]
+    data_directory = r"./white_list"  # local path
+    subdir_list = os.listdir(data_directory)
     # --------------------------------------------
 
+    total_data = pd.DataFrame()
+    label_name = "label"
+
     for subdir in subdir_list:
+        subdir = subdir_list[3]
         print(subdir)
         dir = os.path.join(data_directory, subdir)
 
@@ -34,26 +36,64 @@ def main():
         # Calculations
         mode_changes = _get_mode_changes(markers)
 
-    # Plotting
-    plot_acceleration(acceleration, mode_changes=mode_changes, title=dir)
-    plot_position(positions)
-    # plot_acceleration_and_gps(acceleration, positions, mode_changes=mode_changes, title=dir)
+        # Plotting
+        plot_acceleration(acceleration, mode_changes=mode_changes, title=dir)
+        plot_position(positions)
+
+        break
+
+        # # ==================
+        # # MAIN
+        # # ==================
+        #
+        # # DATAPOINTS
+        # # --------------------------
+        # data = pd.DataFrame()
+        # acceleration = acceleration[["x", "y", "z"]]
+        # # data[["std_x", "std_y", "std_z"]] = acceleration.resample("10s").std()      # Standard derivative
+        # data["std_sum"] = acceleration.resample("10s").std().sum(axis=1)      # Standard derivative
+        #
+        # # data[["max_x", "max_y", "max_z"]] = acceleration.resample("10s").max()      # Maximum
+        # # data[["min_x", "min_y", "min_z"]] = acceleration.resample("10s").min()      # Minimum
+        # # data[["abs_x", "abs_y", "abs_z"]] = acceleration.abs().resample("10s").max()     # Absolute Max/Min
+        # data["absmax_sum"] = acceleration.abs().resample("10s").max().sum(axis=1)     # Absolute Max/Min
+        # # data[["abs_max_x", "abs_max_y", "abs_max_z"]] = acceleration.abs().resample("10s").max()     # Absolute Max/Min
+        #
+        # # data[["sum_x", "sum_y", "sum_z"]] = acceleration.resample("10s").sum()           # sum
+        # # data["sum_sum"] = acceleration.abs().resample("10s").sum().sum(axis=1)  # sum
+        #
+        # # data[["median_x", "median_y", "median_z"]] = acceleration.resample("10s").median()  # median
+        # # data["median_sum"] = acceleration.abs().resample("10s").median().sum(axis=1)  # median
+        #
+        #
+        # data[label_name] = "NONE"
+        # for mode_change in mode_changes.iterrows():
+        #     print(mode_change)
+        #     # TODO: Check if the right mode_change tst was used
+        #     data.loc[data.index >= mode_change[1]["datetime"], label_name] = mode_change[1]["mode"]
+        #
+        # # Append to other data
+        # total_data = total_data.append(data)
+
+    # import seaborn as sns
+    # sns.pairplot(total_data, hue=label_name)
 
     return True
 
 
 #%%
 
-
 def _read_position_csv(dir):
     fname = os.path.join(dir, "positions.csv")
     data = pd.read_csv(fname, parse_dates=["time"])
+    data.index = data.time
     return data
 
 
 def _read_acceleration_csv(dir):
     fname = os.path.join(dir, "acceleration.csv")
     data = pd.read_csv(fname, parse_dates=["time"])
+    data.index = data.time
     return data
 
 
@@ -61,6 +101,7 @@ def _read_markers_csv(dir):
     fname = os.path.join(dir, "markers.csv")
     columns = ["time", "key", "value", "value1", "value2", "value3", "value4", "value5", "value6", "value7", "value8"]
     data = pd.read_csv(fname, sep=";", engine="python", names=columns, parse_dates=["time"])
+    data.index = data.time
     return data
 
 
